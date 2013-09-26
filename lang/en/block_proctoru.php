@@ -7,4 +7,6 @@ $string['block_proctoru_cron_run']  = 'Cron';
 $string['block_proctoru_cron_desc'] = 'Run with Cron?';
 $string['infofield_shortname'] = "user_proctoru";
 $string['user_proctoru'] = "ProctorU registration status";
+$string['block_proctoru_proctoru_token'] = 'ProctorU webservice token';
+$string['block_proctoru_proctoru_token_description'] = 'token for connecting to ProctorU'
 ?>

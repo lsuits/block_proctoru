@@ -18,5 +18,12 @@ if ($ADMIN->fulltree) {
                     $roles
             )
     );
+    $settings->add(
+            new admin_setting_configcheckbox(
+                    'block_proctoru_bool_cron',
+                    get_string('block_proctoru_cron_run','block_proctoru'),
+                    get_string('block_proctoru_cron_desc','block_proctoru'),
+                    true, true, false)
+            );
 }
 ?>

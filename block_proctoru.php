@@ -10,21 +10,19 @@ class block_proctoru extends block_base {
     }
     
     public function get_content() {
-        global $USER;
-        
+
         if ($this->content !== null) {
           return $this->content;
         }
         
         $this->content = new stdClass();
+
         if($this->isUserATeacherSomehwere()){
-            
             return $this->content;
         }else{
             return $this->content->text = "You must register with Proctor U before Moodle course content will be available!";
         }
-        
-        
+
     }
     
     public function isUserATeacherSomehwere(){
@@ -41,6 +39,16 @@ class block_proctoru extends block_base {
             }
         }
         return false;
+    }
+
+    public function cron(){
+        global $CFG;
+        if($CFG->block_proctoru_bool_cron == 1){
+            mtrace(sprintf("Running ProctorU cron tasks"));
+        }else{
+            mtrace("Skipping ProctorU");
+        }
+        return true;
     }
  
 }

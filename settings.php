@@ -29,6 +29,15 @@ if ($ADMIN->fulltree) {
     );
 
     $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru_credentials_location',
+                    get_string('credentials_location','block_proctoru'),
+                    get_string('credentials_location_description','block_proctoru'),
+                    ''
+            )
+    );
+
+    $settings->add(
             new admin_setting_configcheckbox(
                     'block_proctoru_bool_cron',
                     get_string('block_proctoru_cron_run','block_proctoru'),

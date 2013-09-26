@@ -12,8 +12,8 @@ if ($ADMIN->fulltree) {
     $settings->add(
             new admin_setting_configmultiselect(
                     'block_proctoru_roleselection',
-                    'block_proctoru_roleselectionlabel',
-                    'block_proctoru_roleselectiondescription',
+                    get_string('block_proctoru_roleselectionlabel','block_proctoru'),
+                    get_string('block_proctoru_roleselectiondescription','block_proctoru'),
                     $exemptRoles,
                     $roles
             )

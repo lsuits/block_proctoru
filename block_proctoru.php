@@ -1,8 +1,12 @@
 <?php
 
-class proctor_u extends block_base {
+class block_proctoru extends block_base {
+    
+    public function has_config(){
+        return true;
+    }
     public function init() {
-        $this->title = get_string('pluginname', 'block_proctor_u');
+        $this->title = get_string('pluginname', 'block_proctoru');
     }
     
     public function get_content() {
@@ -19,6 +23,7 @@ class proctor_u extends block_base {
         require_login();
         
         $contexts = $USER->access['ra'];
+        $rolesNotRestricted = $CFG->proctoru_roles;
         
         foreach($contexts as $path=>$role){
             if(($ctx = strstr('/1/3/',$path)!=false)){

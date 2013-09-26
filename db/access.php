@@ -1,7 +1,7 @@
 <?php
     $capabilities = array(
  
-    'block/proctor_u:myaddinstance' => array(
+    'block/proctoru:myaddinstance' => array(
         'captype' => 'write',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => array(
@@ -11,7 +11,7 @@
         'clonepermissionsfrom' => 'moodle/my:manageblocks'
     ),
  
-    'block/procor_u:addinstance' => array(
+    'block/procoru:addinstance' => array(
         'riskbitmask' => RISK_SPAM | RISK_XSS,
  
         'captype' => 'write',

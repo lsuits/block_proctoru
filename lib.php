@@ -1,13 +1,15 @@
 <?php
 
 class ProctorU {
+
+    public $username, $password, $url;
     /**
      * 
      * @global type $DB
      * @param type $params
      * @return \stdClass
      */
-    public static function default_profile_field($params) {
+    public function default_profile_field($params) {
         global $DB;
 
         if (!$field = $DB->get_record('user_info_field', $params)) {
@@ -29,7 +31,7 @@ class ProctorU {
         return $field;
     }
     
-    public static function isUserATeacherSomehwere() {
+    public function isUserATeacherSomehwere() {
         global $CFG, $USER;
         require_login();
 
@@ -45,12 +47,12 @@ class ProctorU {
         return false;
     }
     
-    public static function fetchLocalUser($userId){
+    public function fetchLocalUser($userId){
         
         return $localUser;
     }
     
-    public static function verifyProctorUser($userId){
+    public function verifyProctorUser($userId){
         $registrationStatus = false;
         $proctorURecord = fetchProctorURecord($userId);
         //evaluate return from fetchProctorURecord($userId)
@@ -60,14 +62,36 @@ class ProctorU {
         return $registrationStatus;
     }
     
-    public static function fetchProctorURecord($localUser){
+    public function fetchProctorURecord($localUser){
         $proctorURecord = new stdClass();
         //curl their webservice
         return $proctorURecord;
     }
 
-    public static function updateUserRecord($userId){
+    public function updateUserRecord($userId){
         
+    }
+
+    public function getLocalWebservicesCredentials(){
+        global $CFG;
+
+        if (!preg_match('/^[http|https]/', $this->url)) {
+            throw new Exception('bad_url');
+        }
+
+        require_once $CFG->libdir . '/filelib.php';
+
+        $curl = new curl(array('cache' => true));
+        $resp = $curl->post($this->url, array('credentials' => 'get'));
+
+        list($username, $password) = explode("\n", $resp);
+
+        if (empty($username) or empty($password)) {
+            throw new Exception('bad_resp');
+        }
+
+        $this->username = trim($username);
+        $this->password = trim($password);
     }
 }
 ?>

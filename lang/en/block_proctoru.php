@@ -1,14 +1,25 @@
 <?php
 $string['pluginname'] = "Proctor U";
-$string['block_proctoru_roleselection'] = 'block_proctoru_roleselection';
-$string['block_proctoru_roleselectionlabel'] = 'Roles Exempt';
-$string['block_proctoru_roleselectiondescription'] = 'which roles should be excluded from the PU lookup';
-$string['block_proctoru_cron_run']  = 'Cron';
-$string['block_proctoru_cron_desc'] = 'Run with Cron?';
+$string['roleselection'] = 'roleselection';
+$string['roleselection_label'] = 'Roles Exempt';
+$string['roleselection_description'] = 'which roles should be excluded from the PU lookup';
+
+$string['cron_run']  = 'Cron';
+$string['cron_desc'] = 'Run with Cron?';
+
 $string['infofield_shortname'] = "user_proctoru";
 $string['user_proctoru'] = "ProctorU registration status";
-$string['block_proctoru_proctoru_token'] = 'ProctorU webservice token';
-$string['block_proctoru_proctoru_token_description'] = 'token for connecting to ProctorU';
+
+$string['proctoru_token'] = 'ProctorU webservice token';
+$string['proctoru_token_description'] = 'token for connecting to ProctorU';
+
 $string['credentials_location'] = 'Crednetials Location';
 $string['credentials_location_description'] = 'Location of local webservices credentials';
+
+$string['localwebservice_url'] = 'local Webservices URL';
+$string['localwebservice_url_description'] = "URL for the local users' webservice";
+$string['localwebservice_fetchuser_servicename'] = 'User Profile service name';
+$string['localwebservice_fetchuser_servicename_description'] = "Source for user profile information";
+$string['localwebservice_userexists_servicename'] = 'User Profile service name';
+$string['localwebservice_userexists_servicename_description'] = "Source for user profile information";
 ?>

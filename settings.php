@@ -11,9 +11,9 @@ if ($ADMIN->fulltree) {
 
     $settings->add(
             new admin_setting_configmultiselect(
-                    'block_proctoru_roleselection',
-                    get_string('block_proctoru_roleselectionlabel','block_proctoru'),
-                    get_string('block_proctoru_roleselectiondescription','block_proctoru'),
+                    'block_proctoru/roleselection',
+                    get_string('roleselection_label','block_proctoru'),
+                    get_string('roleselection_description','block_proctoru'),
                     $exemptRoles,
                     $roles
             )
@@ -21,27 +21,53 @@ if ($ADMIN->fulltree) {
 
     $settings->add(
             new admin_setting_configtext(
-                    'block_proctoru_proctoru_key',
-                    get_string('block_proctoru_proctoru_token','block_proctoru'),
-                    get_string('block_proctoru_proctoru_token_description','block_proctoru'),
+                    'block_proctoru/proctoru_key',
+                    get_string('proctoru_token','block_proctoru'),
+                    get_string('proctoru_token_description','block_proctoru'),
                     ''
             )
     );
 
     $settings->add(
             new admin_setting_configtext(
-                    'block_proctoru_credentials_location',
+                    'block_proctoru/credentials_location',
                     get_string('credentials_location','block_proctoru'),
                     get_string('credentials_location_description','block_proctoru'),
+                    ''
+            )
+    );
+    
+    $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru/localwebservice_url',
+                    get_string('localwebservice_url','block_proctoru'),
+                    get_string('localwebservice_url_description','block_proctoru'),
+                    ''
+            )
+    );
+    
+    $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru/localwebservice_userexists_servicename',
+                    get_string('localwebservice_userexists_servicename','block_proctoru'),
+                    get_string('localwebservice_userexists_servicename_description','block_proctoru'),
+                    ''
+            )
+    );
+    $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru/localwebservice_fetchuser_servicename',
+                    get_string('localwebservice_fetchuser_servicename','block_proctoru'),
+                    get_string('localwebservice_fetchuser_servicename_description','block_proctoru'),
                     ''
             )
     );
 
     $settings->add(
             new admin_setting_configcheckbox(
-                    'block_proctoru_bool_cron',
-                    get_string('block_proctoru_cron_run','block_proctoru'),
-                    get_string('block_proctoru_cron_desc','block_proctoru'),
+                    'block_proctoru/bool_cron',
+                    get_string('cron_run','block_proctoru'),
+                    get_string('cron_desc','block_proctoru'),
                     true, true, false)
             );
 }

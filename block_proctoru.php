@@ -12,6 +12,7 @@ class block_proctoru extends block_base {
     }
 
     public function init() {
+        global $CFG;
         $this->pu = new ProctorU();
         $this->title = get_string('pluginname', 'block_proctoru');
         $fieldParams = array(
@@ -22,11 +23,11 @@ class block_proctoru extends block_base {
     }
 
     public function get_content() {
-
+        
         if ($this->content !== null) {
             return $this->content;
         }
-
+        
         $this->content = new stdClass();
 
         if ($this->pu->isUserATeacherSomehwere()) {

@@ -1,8 +1,16 @@
 <?php
 
+require_once $CFG->libdir . '/filelib.php';
+
 class ProctorU {
 
-    public $username, $password, $url;
+    public $username, $password, $localWebservicesCredentialsUrl, $localWebserviceUrl;
+
+    public function __construct() {
+        $this->localWebservicesCredentialsUrl = get_config('block_proctoru','credentials_location');
+        $this->localWebservicesUrl = get_config('block_proctoru','localwebservice_url');
+    }
+
     /**
      * 
      * @global type $DB
@@ -30,59 +38,102 @@ class ProctorU {
 
         return $field;
     }
-    
+
     public function isUserATeacherSomehwere() {
         global $CFG, $USER;
+        //@TODO - see what else we can use require_login for to restrict/redirect
         require_login();
 
-        $contexts = $USER->access['ra'];
+        if (is_siteadmin($USER->id)) {
+            return true;
+        }
 
-        foreach ($contexts as $path => $role) {
-            foreach (array_values($role) as $roleid) {
-                if (in_array($roleid, explode(',', $CFG->block_proctoru_roleselection))) {
-                    return true;
-                }
+        $mapPathRoles = $this->getUserAccessContextPaths();
+
+        foreach (array_values($mapPathRoles) as $role) {
+            if (in_array($role, explode(',', $CFG->block_proctoru_roleselection))) {
+                return true;
             }
         }
         return false;
     }
-    
-    public function fetchLocalUser($userId){
-        
-        return $localUser;
+
+    public function getFlattenedUserAccessContextPaths() {
+        global $USER;
+        if (!isset($USER->access['ra'])) {
+            return false;
+        }
+        $mapPathRoles = array();
+        foreach ($USER->access['ra'] as $path => $raMap) {
+            foreach (array_keys($raMap) as $role) {
+                $mapPathRoles[] = array($path => $role);
+            }
+        }
+        return $mapPathRoles;
     }
-    
-    public function verifyProctorUser($userId){
+
+    public function ensureLocalUserExists($userId) {
+        $user = $this->getMoodleUser($userId);
+        $params = array(
+            'serviceId' => get_config('block_proctoru','localwebservice_fetchuser_servicename'),
+            'widget1'   => $this->username,
+            'widget2'   => $this->password,
+            '1'         => $user->idnumber,
+        );
+
+        $curl = new curl();
+        $resp = $curl->post($this->localWebservicesUrl, $params);
+
+        return $resp;
+    }
+
+    public function getMoodleUser($userId) {
+        global $DB;
+        $user = $DB->get_record('user', array('id' => $userId));
+        return $user;
+    }
+
+//    public function fetchLocalUser($userId) {
+//        $params = array(
+//        'serviceId' =>
+//        );
+//        $curl = new curl();
+//        $resp = $curl->post($this->localWebserviceUrl, $params);
+//
+//        return $localUser;
+//    }
+
+    public function verifyProctorUser($userId) {
         $registrationStatus = false;
         $proctorURecord = fetchProctorURecord($userId);
         //evaluate return from fetchProctorURecord($userId)
-        if(isset($proctorURecord->hasImage)){
+        if (isset($proctorURecord->hasImage)) {
             $registrationStatus = true;
         }
         return $registrationStatus;
     }
-    
-    public function fetchProctorURecord($localUser){
+
+    public function fetchProctorURecord($localUser) {
         $proctorURecord = new stdClass();
         //curl their webservice
         return $proctorURecord;
     }
 
-    public function updateUserRecord($userId){
+    public function updateUserRecord($userId) {
         
     }
 
-    public function getLocalWebservicesCredentials(){
+    public function getLocalWebservicesCredentials() {
         global $CFG;
 
-        if (!preg_match('/^[http|https]/', $this->url)) {
+        if (!preg_match('/^[http|https]/', $this->localWebservicesCredentialsUrl)) {
             throw new Exception('bad_url');
         }
 
         require_once $CFG->libdir . '/filelib.php';
 
         $curl = new curl(array('cache' => true));
-        $resp = $curl->post($this->url, array('credentials' => 'get'));
+        $resp = $curl->post($this->localWebservicesCredentialsUrl, array('credentials' => 'get'));
 
         list($username, $password) = explode("\n", $resp);
 
@@ -93,5 +144,7 @@ class ProctorU {
         $this->username = trim($username);
         $this->password = trim($password);
     }
+
 }
+
 ?>

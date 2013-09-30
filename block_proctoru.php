@@ -30,7 +30,7 @@ class block_proctoru extends block_base {
         
         $this->content = new stdClass();
 
-        if ($this->pu->isUserATeacherSomehwere()) {
+        if ($this->pu->userHasRegistration()) {
             return $this->content;
         } else {
             return $this->content->text = "You must register with Proctor U before Moodle course content will be available!";

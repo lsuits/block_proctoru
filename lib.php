@@ -1,4 +1,5 @@
 <?php
+
 global $CFG;
 require_once $CFG->libdir . '/filelib.php';
 
@@ -7,9 +8,8 @@ class ProctorU {
     public $username, $password, $localWebservicesCredentialsUrl, $localWebserviceUrl;
 
     public function __construct() {
-        $this->localWebservicesCredentialsUrl   = get_config('block_proctoru','credentials_location');
-        $this->localWebservicesUrl              = get_config('block_proctoru','localwebservice_url');
-        list($this->username, $this->password)  = $this->getLocalWebservicesCredentials();
+        $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');
+        $this->localWebservicesUrl = get_config('block_proctoru', 'localwebservice_url');
     }
 
     /**
@@ -50,12 +50,12 @@ class ProctorU {
      *
      * @return type
      */
-    public function userHasRegistration(){
+    public function userHasRegistration() {
         global $USER;
         require_login();
 
-        $admin      = is_siteadmin($USER->id);
-        $exempt     = $this->userHasExemptRole();
+        $admin = is_siteadmin($USER->id);
+        $exempt = $this->userHasExemptRole();
         $registered = $this->userHasProctoruProfileFieldValue();
 
         return $admin or $exempt or $registered;
@@ -66,20 +66,20 @@ class ProctorU {
      * @global stdClass $USER
      * @return stdClass|false
      */
-    public function userHasProctoruProfileFieldValue(){
+    public function userHasProctoruProfileFieldValue() {
         global $USER;
 
-        $custField  = get_config('block_proctoru', 'infofield_shortname');
+        $custField = get_config('block_proctoru', 'infofield_shortname');
         //@TODO handle specific values, not just non-null
         return isset($USER->profile[$custField]) ? $USER->profile[$custField] : false;
     }
 
     public function userHasExemptRole() {
-        $paths        = $this->getFlattenedUserAccessContextPaths();
-        $userRoles    = $paths ? array_values($paths) : false;
-        $rolesExempt  = explode(',', get_config('block_proctoru','roleselection'));
+        $paths = $this->getFlattenedUserAccessContextPaths();
+        $userRoles = $paths ? array_values($paths) : false;
+        $rolesExempt = explode(',', get_config('block_proctoru', 'roleselection'));
 
-        if(!$userRoles || empty($rolesExempt)){
+        if (!$userRoles || empty($rolesExempt)) {
             return false;
         }
         $intersection = array_intersect(array_values($userRoles), $rolesExempt);
@@ -109,59 +109,55 @@ class ProctorU {
         return $mapPathRoles;
     }
 
+    public function xmlFetchLocalWebserviceResponse(array $params) {
+        $curl = new curl();
+        $resp = $curl->post($this->localWebservicesUrl, $params);
+        return new SimpleXMLElement($resp);
+    }
+
     /**
      * 
      * @param int $userId userid to find in remote service
      * @return String raw XML response
      */
-    public function getPsuedoId($userId) {
-        $user   = $this->getMoodleUser($userId);
+    public function intGetPseudoId($userId) {
+        $user = $this->usrGetMoodleUser($userId);
 
         $params = array(
-            "serviceId" => get_config('block_proctoru','localwebservice_fetchuser_servicename'),
-            "widget1"   => $this->username,
-            "widget2"   => $this->password,
-            "1"         => $user->idnumber,
+            "serviceId" => get_config('block_proctoru', 'localwebservice_fetchuser_servicename'),
+            "widget1" => $this->username,
+            "widget2" => $this->password,
+            "1" => $user->idnumber,
         );
 
         $curl = new curl();
-        $resp = $curl->get($this->localWebservicesUrl, $params);
+        $resp = $curl->post($this->localWebservicesUrl, $params);
+        //@TODO return int
+        return $resp;
+    }
+
+    public function blnLocalWebserviceUserHasProfile($userId) {
+        $user = $this->usrGetMoodleUser($userId);
+
+        $params = array(
+            "serviceId" => get_config('block_proctoru', 'localwebservice_userexists_servicename'),
+            "widget1" => $this->username,
+            "widget2" => $this->password,
+            "1" => $user->idnumber,
+            "2" => get_config('block_proctoru', 'stu_profile'),
+        );
+
+        $curl = new curl();
+        $resp = $curl->post($this->localWebservicesUrl, $params);
 
         return $resp;
     }
 
-    public function findUser($userId) {
-        $user   = $this->getMoodleUser($userId);
-
-        $params = array(
-            "serviceId" => get_config('block_proctoru','localwebservice_userexists_servicename'),
-            "widget1"   => $this->username,
-            "widget2"   => $this->password,
-            "1"         => $user->idnumber,
-            "2"         => get_config('block_proctoru', 'stu_profile'),
-        );
-
-        $curl = new curl();
-        $resp = $curl->get($this->localWebservicesUrl, $params);
-
-        return $resp;
-    }
-
-    public function getMoodleUser($userId) {
+    public function usrGetMoodleUser($userId) {
         global $DB;
         $user = $DB->get_record('user', array('id' => $userId));
         return $user;
     }
-
-//    public function fetchLocalUser($userId) {
-//        $params = array(
-//        'serviceId' =>
-//        );
-//        $curl = new curl();
-//        $resp = $curl->post($this->localWebserviceUrl, $params);
-//
-//        return $localUser;
-//    }
 
     public function verifyProctorUser($userId) {
         $registrationStatus = false;
@@ -183,17 +179,80 @@ class ProctorU {
         
     }
 
-    public function getLocalWebservicesCredentials() {
-        global $CFG;
+}
 
-        if (!preg_match('/^[http|https]/', $this->localWebservicesCredentialsUrl)) {
+class CurlXmlClient {
+
+    public $response;
+    public $baseUrl;
+    public $method;
+    public $options;
+    public $stdParams;
+    public $params;
+
+    public function __construct($baseUrl, $method, $options) {
+        if (!preg_match('/^[http|https]/', $baseUrl)) {
             throw new Exception('bad_url');
         }
+        $this->baseUrl      = $baseUrl;
+        $this->method       = $method;
+        $this->options      = $options;
+        $this->stdParams    = array();
+    }
 
-        require_once $CFG->libdir . '/filelib.php';
+    public function addParams(array $params= array()) {
+        $this->params = array_merge($this->stdParams, $params);
+        return $this;
+    }
 
-        $curl = new curl(array('cache' => true));
-        $resp = $curl->post($this->localWebservicesCredentialsUrl, array('credentials' => 'get'));
+    public function strGetRawResponse() {
+        $curl = new curl($this->options);
+        $meth = $this->method;
+        return $this->resp = $curl->$meth($this->baseUrl, $this->params);
+    }
+
+    public function xmlFetchResponse() {
+        return new SimpleXMLElement($this->strGetRawResponse());
+    }
+
+}
+
+class CredentialsClient extends CurlXmlClient {
+
+    public function __construct() {
+        $baseUrl   = get_config('block_proctoru', 'credentials_location');
+        $method    = 'post';
+        $options   = array('cache' => true);
+
+        parent::__construct($baseUrl, $method, $options);
+
+        $this->stdParams = array('credentials' => 'get');
+        $this->addParams();
+    }
+
+}
+
+class LocalDataStoreClient extends CurlXmlClient {
+
+    public function __construct() {
+
+        $baseUrl = get_config('block_proctoru', 'localwebservice_url');
+        $method = 'get';
+        $options = array();
+
+        parent::__construct($baseUrl, $method, $options);
+        list($w1, $w2) = $this->getLocalDataStoreWidgets();
+
+        $this->stdParams = array(
+            "widget1" => $w1,
+            "widget2" => $w2,
+        );
+    }
+
+    public function getLocalDataStoreWidgets() {
+
+        $client = new CredentialsClient();
+        $resp   = $client->strGetRawResponse();
 
         list($username, $password) = explode("\n", $resp);
 
@@ -201,9 +260,59 @@ class ProctorU {
             throw new Exception('bad_resp');
         }
 
-        return array(strtolower(trim($username)),trim($password));
+        return array(strtolower(trim($username)), trim($password));
     }
 
+    public function blnUserExists($idnumber) {
+        $this->addParams();
+        $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_userexists_servicename');
+        $this->params['1'] = $idnumber;
+        $this->params['2'] = get_config('block_proctoru', 'stu_profile');
+
+        $xml = $this->xmlFetchResponse();
+
+        return (string)$xml->ROW->HAS_PROFILE;
+    }
+
+    public function intPseudoId($idnumber){
+        $this->addParams();
+        $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_userexists_servicename');
+        $this->params['1'] = $idnumber;
+
+        $xml = $this->xmlFetchResponse();
+        return (int)(string)$xml->ROW->PSEUDO_ID;
+    }
+
+}
+
+class ProctorUClient extends CurlXmlClient {
+    public function __construct(){
+        $baseUrl   = get_config('block_proctoru', 'proctoru_api');
+        $method    = 'get';
+        $options   = array('cache' => true);
+        parent::__construct($baseUrl, $method, $options);
+    }
+
+    /**
+     * @Override
+     * @return type
+     */
+    public function getUserProfile($pseudoId) {
+        $curl = new curl($this->options);
+        $meth = $this->method;
+
+        $now = new DateTime();
+
+        $this->params = array(
+            'time_sent'     => $now->format(DateTime::ISO8601),
+            'student_Id'    => $pseudoId
+        );
+        $token = get_config('block_proctoru', 'proctoru_token');
+        $curl->setHeader(sprintf('Authorization-Token: %s', $token));
+        $this->resp = $curl->$meth($this->baseUrl, $this->params);
+
+        return $this->resp;
+    }
 }
 
 ?>

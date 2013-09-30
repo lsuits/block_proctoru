@@ -21,9 +21,17 @@ if ($ADMIN->fulltree) {
 
     $settings->add(
             new admin_setting_configtext(
-                    'block_proctoru/proctoru_key',
+                    'block_proctoru/proctoru_token',
                     get_string('proctoru_token', 'block_proctoru'),
                     get_string('proctoru_token_description', 'block_proctoru'),
+                    ''
+            )
+    );
+    $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru/proctoru_api',
+                    get_string('proctoru_api', 'block_proctoru'),
+                    get_string('proctoru_api_description', 'block_proctoru'),
                     ''
             )
     );

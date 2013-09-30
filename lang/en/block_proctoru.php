@@ -12,6 +12,8 @@ $string['user_proctoru'] = "ProctorU registration status";
 
 $string['proctoru_token'] = 'ProctorU webservice token';
 $string['proctoru_token_description'] = 'token for connecting to ProctorU';
+$string['proctoru_api'] = "ProctorU URL";
+$string['proctoru_api_description'] = "ProctorU API URL";
 
 $string['credentials_location'] = 'Crednetials Location';
 $string['credentials_location_description'] = 'Location of local webservices credentials';

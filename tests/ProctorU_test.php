@@ -22,19 +22,10 @@ class ProctorU_testscase extends advanced_testcase{
         $this->assertInternalType('string', $this->pu->localWebservicesUrl);
     }
 
-    public function test_getLocalWebservicesCredentials(){
-        list($uname, $pwd) = $this->pu->getLocalWebservicesCredentials();
-
-        $this->assertNotEmpty($uname);
-        $this->assertNotEmpty($pwd);
-        $this->assertInternalType('string', $uname);
-        $this->assertInternalType('string', $pwd);
-    }
-
     public function test_getMoodleUser(){
         $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
         
-        $unit = $this->pu->getMoodleUser($user->id);
+        $unit = $this->pu->usrGetMoodleUser($user->id);
         $this->assertObjectHasAttribute('idnumber', $unit);
         $this->assertEquals($user->idnumber, $unit->idnumber);
     }
@@ -47,7 +38,7 @@ class ProctorU_testscase extends advanced_testcase{
         
         $this->assertTrue($this->pu->userHasExemptRole());
     }
-    
+
     public function test_getFlattenedUserAccessContextPathsForStudent(){
         global $USER;
         $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
@@ -83,16 +74,15 @@ class ProctorU_testscase extends advanced_testcase{
             </ERROR_MSG>  
         </RESULTS>";
 
-        $this->pu->getLocalWebservicesCredentials();
-        $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
-
-        $this->assertNotEmpty($this->pu->localWebservicesUrl);
-        $resp = $this->pu->getPsuedoId($user->id);
-
-        $xdoc = new DOMDocument();
-        $xdoc->loadXML($resp);
-        $this->assertXmlStringNotEqualsXmlString($dasInvalidParamsResponse, $resp);
-        var_dump($resp);
+//        $this->pu->getLocalWebservicesCredentials();
+//        $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
+//
+//        $this->assertNotEmpty($this->pu->localWebservicesUrl);
+//        $resp = $this->pu->intGetPseudoId($user->id);
+//
+//        $xdoc = new DOMDocument();
+//        $xdoc->loadXML($resp);
+//        $this->assertXmlStringNotEqualsXmlString($dasInvalidParamsResponse, $resp);
     }
 }
 ?>

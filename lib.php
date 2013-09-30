@@ -1,5 +1,5 @@
 <?php
-
+global $CFG;
 require_once $CFG->libdir . '/filelib.php';
 
 class ProctorU {
@@ -7,8 +7,9 @@ class ProctorU {
     public $username, $password, $localWebservicesCredentialsUrl, $localWebserviceUrl;
 
     public function __construct() {
-        $this->localWebservicesCredentialsUrl = get_config('block_proctoru','credentials_location');
-        $this->localWebservicesUrl = get_config('block_proctoru','localwebservice_url');
+        $this->localWebservicesCredentialsUrl   = get_config('block_proctoru','credentials_location');
+        $this->localWebservicesUrl              = get_config('block_proctoru','localwebservice_url');
+        list($this->username, $this->password)  = $this->getLocalWebservicesCredentials();
     }
 
     /**
@@ -39,50 +40,109 @@ class ProctorU {
         return $field;
     }
 
-    public function isUserATeacherSomehwere() {
-        global $CFG, $USER;
-        //@TODO - see what else we can use require_login for to restrict/redirect
+    /**
+     * Determine whether the user is proctoru registered or exempt
+     * admins are exempt and return true
+     * users having any instance of any role specified in the admin settings
+     * for this block are exempt and return true
+     * users aready having a value == 'registered' in their custom 
+     * proctoru profile field return true
+     *
+     * @return type
+     */
+    public function userHasRegistration(){
+        global $USER;
         require_login();
 
-        if (is_siteadmin($USER->id)) {
-            return true;
-        }
+        $admin      = is_siteadmin($USER->id);
+        $exempt     = $this->userHasExemptRole();
+        $registered = $this->userHasProctoruProfileFieldValue();
 
-        $mapPathRoles = $this->getUserAccessContextPaths();
-
-        foreach (array_values($mapPathRoles) as $role) {
-            if (in_array($role, explode(',', $CFG->block_proctoru_roleselection))) {
-                return true;
-            }
-        }
-        return false;
+        return $admin or $exempt or $registered;
     }
 
+    /**
+     * see if the proctoru custom field exists in the user profile
+     * @global stdClass $USER
+     * @return stdClass|false
+     */
+    public function userHasProctoruProfileFieldValue(){
+        global $USER;
+
+        $custField  = get_config('block_proctoru', 'infofield_shortname');
+        //@TODO handle specific values, not just non-null
+        return isset($USER->profile[$custField]) ? $USER->profile[$custField] : false;
+    }
+
+    public function userHasExemptRole() {
+        $paths        = $this->getFlattenedUserAccessContextPaths();
+        $userRoles    = $paths ? array_values($paths) : false;
+        $rolesExempt  = explode(',', get_config('block_proctoru','roleselection'));
+
+        if(!$userRoles || empty($rolesExempt)){
+            return false;
+        }
+        $intersection = array_intersect(array_values($userRoles), $rolesExempt);
+
+        return empty($intersection) ? false : true;
+    }
+
+    /**
+     * helper method to get the 'access' member of the global USER object
+     * and flatten it into a new array of the form
+     * contextPath => roleid
+     * @global type $USER
+     * @return boolean|mixed
+     */
     public function getFlattenedUserAccessContextPaths() {
         global $USER;
         if (!isset($USER->access['ra'])) {
             return false;
         }
         $mapPathRoles = array();
+        //@TODO eliminate the nested loops
         foreach ($USER->access['ra'] as $path => $raMap) {
             foreach (array_keys($raMap) as $role) {
-                $mapPathRoles[] = array($path => $role);
+                $mapPathRoles[$path] = $role;
             }
         }
         return $mapPathRoles;
     }
 
-    public function ensureLocalUserExists($userId) {
-        $user = $this->getMoodleUser($userId);
+    /**
+     * 
+     * @param int $userId userid to find in remote service
+     * @return String raw XML response
+     */
+    public function getPsuedoId($userId) {
+        $user   = $this->getMoodleUser($userId);
+
         $params = array(
-            'serviceId' => get_config('block_proctoru','localwebservice_fetchuser_servicename'),
-            'widget1'   => $this->username,
-            'widget2'   => $this->password,
-            '1'         => $user->idnumber,
+            "serviceId" => get_config('block_proctoru','localwebservice_fetchuser_servicename'),
+            "widget1"   => $this->username,
+            "widget2"   => $this->password,
+            "1"         => $user->idnumber,
         );
 
         $curl = new curl();
-        $resp = $curl->post($this->localWebservicesUrl, $params);
+        $resp = $curl->get($this->localWebservicesUrl, $params);
+
+        return $resp;
+    }
+
+    public function findUser($userId) {
+        $user   = $this->getMoodleUser($userId);
+
+        $params = array(
+            "serviceId" => get_config('block_proctoru','localwebservice_userexists_servicename'),
+            "widget1"   => $this->username,
+            "widget2"   => $this->password,
+            "1"         => $user->idnumber,
+            "2"         => get_config('block_proctoru', 'stu_profile'),
+        );
+
+        $curl = new curl();
+        $resp = $curl->get($this->localWebservicesUrl, $params);
 
         return $resp;
     }
@@ -141,8 +201,7 @@ class ProctorU {
             throw new Exception('bad_resp');
         }
 
-        $this->username = trim($username);
-        $this->password = trim($password);
+        return array(strtolower(trim($username)),trim($password));
     }
 
 }

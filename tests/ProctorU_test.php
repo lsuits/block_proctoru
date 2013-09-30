@@ -23,12 +23,12 @@ class ProctorU_testscase extends advanced_testcase{
     }
 
     public function test_getLocalWebservicesCredentials(){
-        $this->pu->getLocalWebservicesCredentials();
+        list($uname, $pwd) = $this->pu->getLocalWebservicesCredentials();
 
-        $this->assertNotEmpty($this->pu->username);
-        $this->assertNotEmpty($this->pu->password);
-        $this->assertInternalType('string', $this->pu->username);
-        $this->assertInternalType('string', $this->pu->password);
+        $this->assertNotEmpty($uname);
+        $this->assertNotEmpty($pwd);
+        $this->assertInternalType('string', $uname);
+        $this->assertInternalType('string', $pwd);
     }
 
     public function test_getMoodleUser(){
@@ -92,6 +92,7 @@ class ProctorU_testscase extends advanced_testcase{
         $xdoc = new DOMDocument();
         $xdoc->loadXML($resp);
         $this->assertXmlStringNotEqualsXmlString($dasInvalidParamsResponse, $resp);
+        var_dump($resp);
     }
 }
 ?>

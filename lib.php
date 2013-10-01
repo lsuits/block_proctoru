@@ -41,11 +41,11 @@ class ProctorU {
     }
 
     /**
-     * Determine whether the user is proctoru registered or exempt
-     * admins are exempt and return true
-     * users having any instance of any role specified in the admin settings
+     * Determine whether the user is proctoru-registered or exempt.
+     * Admins are exempt and return true
+     * Users having any instance of any role specified in the admin settings
      * for this block are exempt and return true
-     * users aready having a value == 'registered' in their custom 
+     * Users aready having a value == 'registered' in their custom 
      * proctoru profile field return true
      *
      * @return type
@@ -54,8 +54,8 @@ class ProctorU {
         global $USER;
         require_login();
 
-        $admin = is_siteadmin($USER->id);
-        $exempt = $this->userHasExemptRole();
+        $admin      = is_siteadmin($USER->id);
+        $exempt     = $this->userHasExemptRole();
         $registered = $this->userHasProctoruProfileFieldValue();
 
         return $admin or $exempt or $registered;
@@ -241,7 +241,7 @@ class LocalDataStoreClient extends CurlXmlClient {
         $options = array();
 
         parent::__construct($baseUrl, $method, $options);
-        list($w1, $w2) = $this->getLocalDataStoreWidgets();
+        list($w1, $w2) = $this->getWidgets();
 
         $this->stdParams = array(
             "widget1" => $w1,
@@ -249,18 +249,18 @@ class LocalDataStoreClient extends CurlXmlClient {
         );
     }
 
-    public function getLocalDataStoreWidgets() {
+    public function getWidgets() {
 
         $client = new CredentialsClient();
         $resp   = $client->strGetRawResponse();
 
-        list($username, $password) = explode("\n", $resp);
+        list($widget1, $widget2) = explode("\n", $resp);
 
-        if (empty($username) or empty($password)) {
+        if (empty($widget1) or empty($widget2)) {
             throw new Exception('bad_resp');
         }
 
-        return array(strtolower(trim($username)), trim($password));
+        return array(strtolower(trim($widget1)), trim($widget2));
     }
 
     public function blnUserExists($idnumber) {
@@ -282,7 +282,6 @@ class LocalDataStoreClient extends CurlXmlClient {
         $xml = $this->xmlFetchResponse();
         return (int)(string)$xml->ROW->PSEUDO_ID;
     }
-
 }
 
 class ProctorUClient extends CurlXmlClient {
@@ -297,21 +296,18 @@ class ProctorUClient extends CurlXmlClient {
      * @Override
      * @return type
      */
-    public function getUserProfile($pseudoId) {
-        $curl = new curl($this->options);
-        $meth = $this->method;
+    public function strRequestUserProfile($pseudoId) {
+        $now   = new DateTime();
+        $meth  = $this->method;
+        $curl  = new curl($this->options);
+        $token = get_config('block_proctoru', 'proctoru_token');
 
-        $now = new DateTime();
-
+        $curl->setHeader(sprintf('Authorization-Token: %s', $token));
         $this->params = array(
             'time_sent'     => $now->format(DateTime::ISO8601),
             'student_Id'    => $pseudoId
         );
-        $token = get_config('block_proctoru', 'proctoru_token');
-        $curl->setHeader(sprintf('Authorization-Token: %s', $token));
-        $this->resp = $curl->$meth($this->baseUrl, $this->params);
-
-        return $this->resp;
+        return $this->resp = $curl->$meth($this->baseUrl, $this->params);
     }
 }
 

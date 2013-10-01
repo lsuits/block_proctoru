@@ -27,8 +27,7 @@ class ProctorUClient_testcase extends advanced_testcase {
         
         $puUser     = json_decode($response);
         $this->assertNotEmpty($puUser);
-        var_dump($puUser);
-        
+
         $this->assertStringStartsWith(
                 $userConf['puMessage'], 
                 $puUser->message
@@ -39,8 +38,6 @@ class ProctorUClient_testcase extends advanced_testcase {
      * Fetch a user known to exist in the system
      * and verify that this user's fields agree with 
      * the values we expect for 'hasimage, etc...
-     * 
-     * NB: testUser2 is valid in prod, but not in production
      */
     public function test_LookupFoundUser() {
         $user       = $this->conf->data['testUser2']['pseudoId'];

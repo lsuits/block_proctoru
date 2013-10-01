@@ -1,5 +1,9 @@
 <?php
 $string['pluginname'] = "Proctor U";
+$string['not_registered'] = "You are not registered yet with ProctorU. Please Proceed to the Orientation Course for more information.";
+$string['excluded_courses'] = "Excluded Courses";
+$string['excluded_courses_description'] = "Comma-separated list of course IDs that should not be subject to the restrictions imposed by student orientation";
+
 $string['roleselection'] = 'roleselection';
 $string['roleselection_label'] = 'Roles Exempt';
 $string['roleselection_description'] = 'which roles should be excluded from the PU lookup';

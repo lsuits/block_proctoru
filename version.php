@@ -1,5 +1,5 @@
 <?php
 
-$plugin->version = 2013092514;
+$plugin->version = 2013100116;
 $plugin->cron = 30;
 ?>

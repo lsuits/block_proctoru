@@ -22,18 +22,27 @@ class block_proctoru extends block_base {
         $this->field = $this->pu->default_profile_field($fieldParams);
     }
 
+    public function applicable_formats() {
+        return array('site' => true, 'my' => false, 'course' => true);
+    }
+
     public function get_content() {
-        
+        global $COURSE, $USER;
         if ($this->content !== null) {
             return $this->content;
         }
         
+        $public   = explode(',',get_config('block_proctoru','excluded_courses'));
+        $excluded = in_array($COURSE->id,$public);
+
         $this->content = new stdClass();
 
         if ($this->pu->userHasRegistration()) {
             return $this->content;
+        } elseif(!$excluded){
+            header("Location: /blocks/proctoru/index.php");
         } else {
-            return $this->content->text = "You must register with Proctor U before Moodle course content will be available!";
+
         }
     }
 

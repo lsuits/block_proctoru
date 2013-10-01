@@ -21,6 +21,15 @@ if ($ADMIN->fulltree) {
 
     $settings->add(
             new admin_setting_configtext(
+                    'block_proctoru/excluded_courses',
+                    get_string('excluded_courses', 'block_proctoru'),
+                    get_string('excluded_courses_description', 'block_proctoru'),
+                    ''
+            )
+    );
+
+    $settings->add(
+            new admin_setting_configtext(
                     'block_proctoru/proctoru_token',
                     get_string('proctoru_token', 'block_proctoru'),
                     get_string('proctoru_token_description', 'block_proctoru'),

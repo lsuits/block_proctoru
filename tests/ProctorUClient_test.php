@@ -1,7 +1,7 @@
 <?php
 
 global $CFG;
-require_once $CFG->dirroot . '/blocks/proctoru/lib.php';
+require_once $CFG->dirroot . '/blocks/proctoru/Webservicelib.php';
 require_once $CFG->dirroot . '/blocks/proctoru/tests/conf/ConfigProctorU.php';
 
 class ProctorUClient_testcase extends advanced_testcase {

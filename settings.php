@@ -36,6 +36,15 @@ if ($ADMIN->fulltree) {
                     ''
             )
     );
+    
+    $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru/landing_course',
+                    get_string('landing_course', 'block_proctoru'),
+                    get_string('landing_course_description', 'block_proctoru'),
+                    ''
+            )
+    );
 
     $settings->add(
             new admin_setting_configtext(

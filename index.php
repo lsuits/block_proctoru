@@ -13,5 +13,11 @@ $PAGE->set_pagetype('block_ues_logs');
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading($blockname);
-notice(get_string('not_registered', 'block_proctoru'), new moodle_url('/course/view.php',array('id'=>4701)));
+
+$puOutput       = $PAGE->theme->get_renderer($PAGE,'block_proctoru');
+$message        = $puOutput->getUnregisteredMessage();
+$landingCourse  = get_config('block_proctoru', 'landing_course');
+$redirect       = new moodle_url('/course/view.php',array('id'=>$landingCourse));
+
+notice($message, $redirect);
 ?>

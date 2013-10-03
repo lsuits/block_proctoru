@@ -15,6 +15,9 @@ $string['profilefield_shortname'] = "user_proctoru";
 $string['profilefield_shortname_description'] = "Name of the custom profile field";
 $string['user_proctoru'] = "ProctorU registration status";
 
+$string['landing_course'] = "Redirect course id";
+$string['landing_course_description'] = 'ID of the course to which blocked users whould be redirected; for example, a required Orientation course';
+
 $string['proctoru_token'] = 'ProctorU webservice token';
 $string['proctoru_token_description'] = 'token for connecting to ProctorU';
 $string['proctoru_api'] = "ProctorU URL";

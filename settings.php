@@ -10,6 +10,15 @@ if ($ADMIN->fulltree) {
     $exemptRoles = array('student');
 
     $settings->add(
+            new admin_setting_configtext(
+                    'block_proctoru/profilefield_shortname',
+                    get_string('profilefield_shortname', 'block_proctoru'),
+                    get_string('profilefield_shortname_description', 'block_proctoru'),
+                    ''
+            )
+    );
+    
+    $settings->add(
             new admin_setting_configmultiselect(
                     'block_proctoru/roleselection',
                     get_string('roleselection_label', 'block_proctoru'),

@@ -1,40 +1,46 @@
 <?php
-require 'lib.php';
+require_once 'lib.php';
+require_once 'Webservicelib.php';
 
-class ProctorUCron {
-
-    public function arrFetchNonExemptUserids() {
-        global $DB;
-        $exemptRoles    = get_config('block_proctoru', 'roleselection');
-        $sql = 'SELECT DISTINCT userid FROM {role_assignments} WHERE roleid NOT IN ?';
-        return array_values($DB->get_records_sql($sql,$exemptRoles));
-    }
+class ProctorUCronProcessor {
     
-    public function arrFetchRegisteredUserids(){
-        global $DB;
-        $sql = 'SELECT DISTINCT userid FROM {role_assignments} WHERE roleid NOT IN ?';
-        return array_values($DB->get_records_sql($sql));
+    public function __construct(){
+        $this->localDataStore = new LocalDataStoreClient();
     }
 
-    public function verifyProctorUser($userId) {
-        $registrationStatus = false;
-        $proctorURecord     = fetchProctorURecord($userId);
-        //evaluate return from fetchProctorURecord($userId)
-        if (isset($proctorURecord->hasImage)) {
-            $registrationStatus = true;
-        }
-        return $registrationStatus;
-    }
 
-    public function fetchProctorURecord($localUser) {
-        $proctorURecord = new stdClass();
-        //curl their webservice
-        return $proctorURecord;
-    }
+    /**
+     * @TODO allow this to be parameterized during corn
+     */
+    public function blnProcessUsers(array $userids= array(), $status = ProctorU::UNREGISTERED){
 
-    public function updateUserRecord($userId) {
+        $userids = empty($userids) ? ProctorU::arrFetchNonExemptUserids() :$userids;
+        $users   = ProctorU::arrFetchRegisteredStatusByUserid($userids);
         
+        foreach($users as $u){
+            $status = $this->constProcessUser($u);
+            ProctorU::intSaveProfileFieldStatus($u->id, $status);
+        }
     }
     
+    public function constProcessUser($u){
+//        mtrace(sprintf("Processing user with idnumer %s", $u->idnumber));
+        if(!$this->localDataStore->blnUserExists($u->idnumber)){
+//            mtrace(sprintf("User %d is NOT registered", $u->id));
+            return ProctorU::UNREGISTERED;
+        }
+        $pseudoID = $this->localDataStore->intPseudoId($u->idnumber);
+//        mtrace(sprintf("got pseudoID for user %s of %s", $u->id, $pseudoID));
+        if($pseudoID !=false){
+            $puClient = new ProctorUClient();
+            if($puClient->blnUserStatus($pseudoID)){
+                return ProctorU::VERIFIED;
+            }else{
+                return ProctorU::REGISTERED;
+            }
+        }else{
+            return ProctorU::ERROR;
+        }
+    }
 }
 ?>

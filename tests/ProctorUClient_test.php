@@ -18,24 +18,9 @@ class ProctorUClient_testcase extends advanced_testcase {
         $this->conf->setConfigs();
         $this->class = new ProctorUClient();
     }
-    
-    public function test_LookupNotFoundUser() {
-        $user       = $this->conf->data['testUser1']['pseudoId'];
-        $response   = $this->class->strRequestUserProfile($user);
-        $userConf   = $this->conf->data['testUser1'];
-        $this->assertNotEmpty($response);
-        
-        $puUser     = json_decode($response);
-        $this->assertNotEmpty($puUser);
-
-        $this->assertStringStartsWith(
-                $userConf['puMessage'], 
-                $puUser->message
-                );
-    }
 
     /**
-     * Fetch a user known to exist in the system
+     * Fetch a user known to exist in the test system
      * and verify that this user's fields agree with 
      * the values we expect for 'hasimage, etc...
      */
@@ -49,7 +34,7 @@ class ProctorUClient_testcase extends advanced_testcase {
         $puActive   = $this->conf->data['testUser2']['puActive'];
         $puUserId   = $this->conf->data['testUser2']['puUserId'];
         
-        $puUser     = json_decode($response);
+        $puUser     = $response;
 
         $this->assertEquals($puHasImage, $puUser->data->hasimage);
         $this->assertEquals($puActive,   $puUser->data->active);
@@ -57,7 +42,9 @@ class ProctorUClient_testcase extends advanced_testcase {
     }
     
     public function test_LookupFoundUser_ProductionApi() {
+        //be sure we'ere using the prod service
         $this->class->baseUrl = get_config('block_proctoru', 'proctoru_api_prod');
+        
         $user       = $this->conf->data['testUser3']['pseudoId'];
         $response   = $this->class->strRequestUserProfile($user);
         
@@ -67,7 +54,7 @@ class ProctorUClient_testcase extends advanced_testcase {
         $puActive   = $this->conf->data['testUser3']['puActive'];
         $puUserId   = $this->conf->data['testUser3']['puUserId'];
         
-        $puUser     = json_decode($response);
+        $puUser     = $response;
 
         $this->assertNotEmpty($puUser);
         $this->assertNotEmpty($puUser->data);
@@ -76,6 +63,24 @@ class ProctorUClient_testcase extends advanced_testcase {
         $this->assertEquals($puUserId,   $puUser->data->user_id);
     }
     
+    public function test_intUserStatus_REGISTERED(){
+        $unit = $this->class->blnUserStatus($this->conf->data['testUser2']['pseudoId']);
+        $this->assertEquals(ProctorU::REGISTERED, $unit);
+    }
+    public function test_intUserStatus_VERIFIED(){
+        //be sure we'ere using the prod service
+        $this->class->baseUrl = get_config('block_proctoru', 'proctoru_api_prod');
+        $unit = $this->class->blnUserStatus($this->conf->data['testUser3']['pseudoId']);
+        $this->assertEquals(ProctorU::VERIFIED, $unit);
+    }
     
+    public function test_getImage(){
+        global $CFG;
+        $userid = $this->conf->data['testUser3']['pseudoId'];
+        $unit   = $this->class->filGetUserImage($userid);
+
+        $this->assertTrue($unit);
+        $this->assertFileExists($CFG->dataroot.'/'.$userid.'.jpg');
+    }
 }
 ?>

@@ -6,7 +6,12 @@ require_once $CFG->libdir . '/filelib.php';
 class ProctorU {
 
     public $username, $password, $localWebservicesCredentialsUrl, $localWebserviceUrl;
-
+    
+    const ERROR         = -1;
+    const UNREGISTERED  = 0;
+    const REGISTERED    = 1;
+    const VERIFIED      = 2;
+    
     public function __construct() {
         $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');
         $this->localWebservicesUrl = get_config('block_proctoru', 'localwebservice_url');
@@ -25,14 +30,14 @@ class ProctorU {
             $field = new stdClass;
             $field->shortname = $params['shortname'];
             $field->name = get_string($field->shortname, 'block_proctoru');
-            $field->description = get_string('custom_field_desc', 'block_proctoru');
+            $field->description = get_string('profilefield_shortname', 'block_proctoru');
             $field->descriptionformat = 1;
             $field->datatype = 'text';
             $field->categoryid = $params['categoryid'];
-            $field->locked = 1;
+            $field->locked  = 1;
             $field->visible = 1;
-            $field->param1 = 30;
-            $field->param2 = 2048;
+            $field->param1  = 30;
+            $field->param2  = 2048;
 
             $field->id = $DB->insert_record('user_info_field', $field);
         }
@@ -113,6 +118,81 @@ class ProctorU {
         global $DB;
         $user = $DB->get_record('user', array('id' => $userId));
         return $user;
+    }
+    
+    /**
+     * 
+     * @global type $DB
+     * @param int $userid
+     * @param ProctorU $status one of the class constants
+     * @return int insert id
+     */
+    public static function intSaveProfileFieldStatus($userid, $status){
+        global $DB;
+        $msg = sprintf("Setting ProctorU status for user %s: ", $userid);
+        //@TODO put these lookups into some method or class var
+        $shortname = get_config('block_proctoru', 'profilefield_shortname'); 
+        $fieldId = $DB->get_field('user_info_field', 'id', array('shortname'=>'user_'.$shortname));
+        
+        $record  = $DB->get_record('user_info_data', array('userid'=>$userid, 'fieldid'=>$fieldId));
+        
+        if(!$record){
+            $record = new stdClass();
+            $record->data = $status; //DRY
+            $record->userid = $userid;
+            $record->fieldid = $fieldId;
+            $record->dataformat = 0; //why
+            
+            mtrace(sprintf("%sInsert new record, status %s", $msg,$status));
+            return $DB->insert_record('user_info_data',$record, true, false);
+            
+        }elseif($record->data != $status){
+            
+            mtrace(sprintf("%supdate from %s to %s.",$msg,$record->data,$status));
+            $record->data = $status;
+            return $DB->update_record('user_info_data',$record, false);
+        }else{
+            mtrace(sprintf("%s Already set - do nothing", $msg));
+            return true;
+        }
+        
+    }
+    
+    
+    public static function arrFetchNonExemptUserids() {
+        global $DB;
+        $rolesExempt = get_config('block_proctoru', 'roleselection');
+        $sql = sprintf('SELECT DISTINCT userid FROM {role_assignments} WHERE roleid NOT IN (%s)', $rolesExempt);
+        return array_keys($DB->get_records_sql($sql));
+    }
+    
+    /**
+     * 
+     * @global type $DB
+     * @param array $filter IDs to search in
+     * @return type
+     */
+    public static function arrFetchRegisteredStatusByUserid(array $filter = array(), $status = "*"){
+        global $DB;
+        
+        $shortname = get_config('block_proctoru', 'profilefield_shortname');
+        $dataFilter = isset($status) ? "AND data    = \"$status\"" : "";
+        $sql = "SELECT u.id, u.username, u.idnumber, (
+                    SELECT data 
+                    FROM   {user_info_data}
+                    WHERE  userid = u.id 
+                        $dataFilter
+                        AND fieldid = (
+                                SELECT id 
+                                FROM   {user_info_field}
+                                WHERE  shortname = '{$shortname}'
+                                )
+                        ) AS status 
+                FROM {user} u ";
+        
+        $sql .= empty($filter) ? ";" : sprintf("WHERE u.id IN (%s);", implode(',',$filter));
+
+        return $DB->get_records_sql(sprintf($sql,$shortname));
     }
 }
 ?>

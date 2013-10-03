@@ -1,6 +1,7 @@
 <?php
 
 global $CFG;
+require_once 'lib.php';
 require_once $CFG->libdir . '/filelib.php';
 
 class CurlXmlClient {
@@ -30,7 +31,8 @@ class CurlXmlClient {
     public function strGetRawResponse() {
         $curl = new curl($this->options);
         $meth = $this->method;
-        return $this->resp = $curl->$meth($this->baseUrl, $this->params);
+        $this->resp = $curl->$meth($this->baseUrl, $this->params);
+        return $this->resp;
     }
 
     public function xmlFetchResponse() {
@@ -86,40 +88,48 @@ class LocalDataStoreClient extends CurlXmlClient {
     }
 
     public function blnUserExists($idnumber) {
+//        mtrace(sprintf("check user %sexists in DAS", $idnumber));
         $this->addParams();
         $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_userexists_servicename');
         $this->params['1'] = $idnumber;
         $this->params['2'] = get_config('block_proctoru', 'stu_profile');
 
         $xml = $this->xmlFetchResponse();
-
-        return (string)$xml->ROW->HAS_PROFILE;
+        
+        if(isset($xml->ERROR_MSG)){
+            throw new Exception(sprintf("Problem obtaining data for service %s, message was %s ",$this->params['serviceId'], $xml->ERROR_MSG));
+        }
+        
+        return (string)$xml->ROW->HAS_PROFILE == 'Y' ? true : false;
     }
 
     public function intPseudoId($idnumber){
+//        mtrace(sprintf("fetch PseudoID from DAS for user %s", $idnumber));
         $this->addParams();
-        $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_userexists_servicename');
+        $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_fetchuser_servicename');
         $this->params['1'] = $idnumber;
 
         $xml = $this->xmlFetchResponse();
-        return (int)(string)$xml->ROW->PSEUDO_ID;
+
+        if(isset($xml->ERROR_MSG)){
+            throw new Exception(sprintf("Problem obtaining data for service %s, message was %s ",$this->params['serviceId'], $xml->ERROR_MSG));
+        }
+        return isset($xml->ROW->PSEUDO_ID) ? (int)(string)$xml->ROW->PSEUDO_ID : false;
     }
 }
 
 class ProctorUClient extends CurlXmlClient {
+
     public function __construct(){
         $baseUrl   = get_config('block_proctoru', 'proctoru_api');
         $method    = 'get';
         $options   = array('cache' => true);
         parent::__construct($baseUrl, $method, $options);
     }
-
-    /**
-     * @Override
-     * @return type
-     */
-    public function strRequestUserProfile($pseudoId) {
+    
+    public function getCurl($remoteStudentIdnumber,$serviceName){
         $now   = new DateTime();
+        $url   = $this->baseUrl.'/'.$serviceName;
         $meth  = $this->method;
         $curl  = new curl($this->options);
         $token = get_config('block_proctoru', 'proctoru_token');
@@ -127,9 +137,67 @@ class ProctorUClient extends CurlXmlClient {
         $curl->setHeader(sprintf('Authorization-Token: %s', $token));
         $this->params = array(
             'time_sent'     => $now->format(DateTime::ISO8601),
-            'student_Id'    => $pseudoId
+            'student_Id'    => $remoteStudentIdnumber
         );
-        return $this->resp = $curl->$meth($this->baseUrl, $this->params);
+
+        return $curl->$meth($url, $this->params);
+    }
+
+    /**
+     * @Override
+     * @return type
+     */
+    public function strRequestUserProfile($remoteStudentIdnumber) {
+        return json_decode($this->getCurl($remoteStudentIdnumber, 'getStudentProfile'));
+    }
+    
+    /**
+     * 
+     * @param int $remoteStudentIdnumber 
+     * @return int any of the ProctorU class constants
+     */
+    public function blnUserStatus($remoteStudentIdnumber){
+        $response    = $this->strRequestUserProfile($remoteStudentIdnumber);
+        $strNotFound = isset($response->message) ? strpos($response->message, 'Student Not Found') >= 0 : false;
+        
+        if(!isset($response->data) && $strNotFound){
+            return ProctorU::UNREGISTERED;
+        }else{
+            return $response->data->hasimage == true;
+        }
+    }
+    
+    public function filGetUserImage($remoteStudentIdnumber){
+        global $CFG;
+        
+        $now   = new DateTime();
+        $url   = $this->baseUrl.'/getStudentImage';
+
+        $savePath = $CFG->dataroot.'/'.$remoteStudentIdnumber.'.jpg';
+//        $dloadOptions = array('filepath' => $savePath);
+//        $this->options += $dloadOptions;
+        
+        $curl  = new curl($this->options);
+        $token = get_config('block_proctoru', 'proctoru_token');
+
+        $curl->setHeader(sprintf('Authorization-Token: %s', $token));
+        $this->params = array(
+            'time_sent'     => $now->format(DateTime::ISO8601),
+            'student_Id'    => $remoteStudentIdnumber
+        );
+
+        return $curl->download_one(
+                $url, 
+                $this->params, 
+                array(
+                    'filepath' => $savePath, 
+                    'timeout' => 5, 
+                    'followlocation' => true, 
+                    'maxredirs' => 3
+                    )
+                );
+        
+        
     }
 }
 ?>

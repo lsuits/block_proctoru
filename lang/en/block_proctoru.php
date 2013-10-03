@@ -11,7 +11,8 @@ $string['roleselection_description'] = 'which roles should be excluded from the 
 $string['cron_run']  = 'Cron';
 $string['cron_desc'] = 'Run with Cron?';
 
-$string['infofield_shortname'] = "user_proctoru";
+$string['profilefield_shortname'] = "user_proctoru";
+$string['profilefield_shortname_description'] = "Name of the custom profile field";
 $string['user_proctoru'] = "ProctorU registration status";
 
 $string['proctoru_token'] = 'ProctorU webservice token';

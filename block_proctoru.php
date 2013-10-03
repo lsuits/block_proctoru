@@ -1,6 +1,7 @@
 <?php
 global $CFG;
 require_once $CFG->dirroot . '/blocks/proctoru/lib.php';
+require_once 'Cronlib.php';
 
 class block_proctoru extends block_base {
 
@@ -12,11 +13,11 @@ class block_proctoru extends block_base {
     }
 
     public function init() {
-        global $CFG;
+
         $this->pu = new ProctorU();
         $this->title = get_string('pluginname', 'block_proctoru');
         $fieldParams = array(
-            'shortname' => get_string('infofield_shortname', 'block_proctoru'),
+            'shortname' => get_string('profilefield_shortname', 'block_proctoru'),
             'categoryid' => 1,
         );
         $this->field = $this->pu->default_profile_field($fieldParams);
@@ -27,7 +28,7 @@ class block_proctoru extends block_base {
     }
 
     public function get_content() {
-        global $COURSE, $USER;
+        global $COURSE;
         if ($this->content !== null) {
             return $this->content;
         }
@@ -48,9 +49,12 @@ class block_proctoru extends block_base {
 
 
     public function cron() {
-        global $CFG;
-        if ($CFG->block_proctoru_bool_cron == 1) {
+
+        if (get_config('block_proctoru','bool_cron' == 1)) {
             mtrace(sprintf("Running ProctorU cron tasks"));
+            $testUsers = array(33601,4);
+            $cron = new ProctorUCronProcessor();
+            $cron->blnProcessUsers($testUsers);
         } else {
             mtrace("Skipping ProctorU");
         }

@@ -1,6 +1,7 @@
 <?php
 require_once 'lib.php';
 require_once 'Webservicelib.php';
+require_once($CFG->libdir . '/gdlib.php');
 
 class ProctorUCronProcessor {
     
@@ -12,10 +13,15 @@ class ProctorUCronProcessor {
     /**
      * @TODO allow this to be parameterized during corn
      */
-    public function blnProcessUsers(array $userids= array(), $status = ProctorU::UNREGISTERED){
-
-        $userids = empty($userids) ? ProctorU::arrFetchNonExemptUserids() :$userids;
-        $users   = ProctorU::arrFetchRegisteredStatusByUserid($userids);
+    public function blnProcessUsers(){
+        $filter = ProctorU::arrFetchNonExemptUserids();
+        $status = "*"; //TODO: this needs to make better semantic sense
+        $userfields = array();
+        $sort="";
+        $limit=10;
+        
+//        $userids = empty($userids) ? ProctorU::arrFetchNonExemptUserids() :$userids;
+        $users   = ProctorU::arrFetchRegisteredStatusByUserid($filter,$status,$userfields,$sort,$limit);
         
         foreach($users as $u){
             $status = $this->constProcessUser($u);
@@ -34,6 +40,8 @@ class ProctorUCronProcessor {
         if($pseudoID !=false){
             $puClient = new ProctorUClient();
             if($puClient->blnUserStatus($pseudoID)){
+                $path = $puClient->filGetUserImage($pseudoID);
+                $this->blnInsertPicture($path, $u->id);
                 return ProctorU::VERIFIED;
             }else{
                 return ProctorU::REGISTERED;
@@ -41,6 +49,13 @@ class ProctorUCronProcessor {
         }else{
             return ProctorU::ERROR;
         }
+    }
+    
+    public function blnInsertPicture($path, $userid){
+        global $DB;
+        $context = get_context_instance(CONTEXT_USER, $userid);
+        process_new_icon($context, 'user', 'icon', 0, $path);
+        $DB->set_field('user', 'picture', 1, array('id' => $userid));
     }
 }
 ?>

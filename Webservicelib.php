@@ -186,7 +186,7 @@ class ProctorUClient extends CurlXmlClient {
             'student_Id'    => $remoteStudentIdnumber
         );
 
-        return $curl->download_one(
+        if($curl->download_one(
                 $url, 
                 $this->params, 
                 array(
@@ -195,7 +195,11 @@ class ProctorUClient extends CurlXmlClient {
                     'followlocation' => true, 
                     'maxredirs' => 3
                     )
-                );
+                )){
+            return $savePath;
+        }else{
+            return false;
+        }
         
         
     }

@@ -172,27 +172,70 @@ class ProctorU {
      * @param array $filter IDs to search in
      * @return type
      */
-    public static function arrFetchRegisteredStatusByUserid(array $filter = array(), $status = "*"){
+    public static function arrFetchRegisteredStatusByUserid(array $filter = array(), $status = "*", $userfields = array(), $sort="", $limit=0, $offset=0){
         global $DB;
         
-        $shortname = get_config('block_proctoru', 'profilefield_shortname');
-        $dataFilter = isset($status) ? "AND data    = \"$status\"" : "";
-        $sql = "SELECT u.id, u.username, u.idnumber, (
-                    SELECT data 
-                    FROM   {user_info_data}
-                    WHERE  userid = u.id 
-                        $dataFilter
-                        AND fieldid = (
-                                SELECT id 
-                                FROM   {user_info_field}
-                                WHERE  shortname = '{$shortname}'
-                                )
-                        ) AS status 
-                FROM {user} u ";
+        if(empty($userfields)){
+            //minimum set of mandatory fields
+            $userfields = array('id', 'firstname', 'lastname', 'username', 'idnumber');
+        }
         
-        $sql .= empty($filter) ? ";" : sprintf("WHERE u.id IN (%s);", implode(',',$filter));
+        $ufields = array();
+        foreach($userfields as $field){
+            $ufields[] = "u.".$field;
+        }
+        
+        $userfields = implode(',',$ufields);
+        
+        $shortname = "user_".get_config('block_proctoru', 'profilefield_shortname');
+        
+        
+        if(isset($status)){
+            $dataFilter = " AND d.data = \"{$status}\"";
+            if($status == ProctorU::UNREGISTERED){
+                $dataFilter .= " OR d.data IS NULL";
+            }
+        }else{
+            $dataFilter = " OR d.data IS NULL";
+        }
+        
+        if($sort != ""){
+            $sort = "ORDER BY ".$sort;
+        }
+        
+        if($offset > 0){
+            $limit = $offset.', '.$limit;
+        }
+        
+        $userfilter = empty($filter) ? ";" : sprintf("AND u.id NOT IN (%s) ", implode(',',$filter));
+        
+        /**
+         * NB: fetches role for user by getting the MIN() roleid
+         * because the highest core Moodle roles have the lowest numbers
+         */
+        $sql = "SELECT {$userfields},  d.data AS status, 
+                (
+                    SELECT shortname 
+                    FROM mdl_role 
+                    WHERE id = (
+                        SELECT min(roleid) 
+                        FROM mdl_role_assignments 
+                        WHERE userid = u.id)
+                ) AS role
+                FROM {user} u LEFT JOIN {user_info_data} d ON u.id = d.userid 
+                WHERE d.fieldid =
+                    (
+                    SELECT id 
+                    FROM   {user_info_field}
+                    WHERE  shortname = '{$shortname}'
+                    )
+                {$userfilter} {$dataFilter} {$sort} LIMIT {$limit}";
 
-        return $DB->get_records_sql(sprintf($sql,$shortname));
+        
+        
+        $query = sprintf($sql,$shortname);
+        
+        return $DB->get_records_sql($query);
     }
 }
 ?>

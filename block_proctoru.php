@@ -52,9 +52,9 @@ class block_proctoru extends block_base {
 
         if (get_config('block_proctoru','bool_cron' == 1)) {
             mtrace(sprintf("Running ProctorU cron tasks"));
-            $testUsers = array(33601,4);
+            $testUsers = array(33514);
             $cron = new ProctorUCronProcessor();
-            $cron->blnProcessUsers($testUsers);
+            $cron->blnProcessUsers(array(),null,array(), "", $limit=10);
         } else {
             mtrace("Skipping ProctorU");
         }

@@ -203,9 +203,7 @@ class ProctorU {
             $sort = "ORDER BY ".$sort;
         }
         
-        if($offset > 0){
-            $limit = $offset.', '.$limit;
-        }
+        $limit = $limit > 0 ? 'LIMIT '.$limit : "";
         
         $userfilter = empty($filter) ? ";" : sprintf("AND u.id NOT IN (%s) ", implode(',',$filter));
         
@@ -229,12 +227,10 @@ class ProctorU {
                     FROM   {user_info_field}
                     WHERE  shortname = '{$shortname}'
                     )
-                {$userfilter} {$dataFilter} {$sort} LIMIT {$limit}";
+                {$userfilter} {$dataFilter} {$sort} {$limit}";
 
-        
-        
         $query = sprintf($sql,$shortname);
-        
+
         return $DB->get_records_sql($query);
     }
 }

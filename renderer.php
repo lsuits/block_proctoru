@@ -25,7 +25,7 @@ defined('MOODLE_INTERNAL') || die;
 require_once $CFG->libdir.'/tablelib.php';
 require_once 'lib.php';
 /**
- * recent_activity block rendrer
+ * proctoru verification status block rendrer
  *
  * @package    block_proctoru
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -37,78 +37,37 @@ class block_proctoru_renderer extends plugin_renderer_base {
         return $output;
     }
     
-    public function getStatusReportTable($sort="", $page=1){
-        global $DB;
+    public function render_registration_report(registration_report $report) {
+
+        $this->page->requires->yui_module(
+            'moodle-block_proctoru-regreport', 
+            'M.block_proctoru.regreport.init',
+            array(array_values($report->data))
+            ); 
         
-        echo $this->header();
-        $perPage   = 20;
-        $totalRows = $DB->count_records('user');
-        
-        $table = new flexible_table('pr0ct0rur3po4t');
-        $table->sortable(true, 'lastname', SORT_ASC);
-//        $table->no_sorting('role');
-        $table->pageable(true);
-        $table->pagesize($perPage,$totalRows);
-        $table->define_baseurl('/blocks/proctoru/report.php');
-        $table->set_attribute('class', 'admintable generaltable');
-        $table->initialbars(true);
-        
-        $table->define_headers(
-                array(
-                    'picture',
-                    'firstname',
-                    'lastname',
-                    'role',
-                    'idnumber',
-                    'status'
-                ));
-        $table->define_columns(array(
-                    'picture',
-                    'firstname',
-                    'lastname',
-                    'role',
-                    'idnumber',
-                    'status'
-                ));
-        
-        $table->setup();
-        list($where, $params) = $table->get_sql_where();
-        
+        $out  = $this->output->heading("ProctorU Registration Status");
+        $out .= html_writer::tag('div', '', array("id"=>"report"));
+        return $this->output->container($out);
+    }
+}
+
+class registration_report implements renderable {
+
+    public $data;
+
+    public function __construct(){
         $userfields = explode(',',user_picture::fields('', array('idnumber')));
-        $limit  = $table->get_page_size();
-        $offset = $table->get_page_start();
         
         $exempt = ProctorU::arrFetchNonExemptUserids();
         
-        $data = ProctorU::arrFetchRegisteredStatusByUserid(
+        $this->data = ProctorU::arrFetchRegisteredStatusByUserid(
                 $exempt,
                 null,
                 $userfields,
-                $table->get_sql_sort(), 
-                $limit,
-                $offset);
+                '', 
+                1000,
+                0);
         
-        foreach(array_values($data) as $d){
-            
-            
-            $userpic = new user_picture($d);
-            
-            $row = array(
-                    $this->render($userpic),
-                    $d->firstname,
-                    $d->lastname,
-                    $d->role,
-                    $d->idnumber,
-                    $d->status,
-                    );
-            
-            $table->add_data($row);
-        }
-        
-        
-
-        $table->print_html();
-        echo $this->footer();
     }
 }
 

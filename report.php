@@ -23,7 +23,7 @@ require_once('../../config.php');
 
 defined('MOODLE_INTERNAL') || die();
 
-global $PAGE;
+global $CFG,$PAGE;
 require_login();
 $context = get_context_instance(CONTEXT_SYSTEM);
 $PAGE->set_context($context);
@@ -34,14 +34,13 @@ $PAGE->set_title('Reg title');
 $PAGE->set_heading('Reg Header');
 $PAGE->navbar->add('Nav');
 
-$sort = optional_param('tsort', "", PARAM_ALPHA);
-$page = optional_param('page', "", PARAM_INT);
-
-$rend = $PAGE->theme->get_renderer($PAGE,'block_proctoru');
-
 if(is_siteadmin($USER)){
 
-    $rend->getStatusReportTable($sort, $page);
+    $output = $PAGE->get_renderer('block_proctoru');
+    $reportData = new registration_report();
+    echo $output->header();
+    echo $output->render($reportData);
+    echo $output->footer();
 
     mtrace('end table out');
 }else{

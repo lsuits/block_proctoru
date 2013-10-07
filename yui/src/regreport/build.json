@@ -1,0 +1,10 @@
+{
+  "name": "moodle-block_proctoru-regreport",
+  "builds": {
+    "moodle-block_proctoru-regreport": {
+      "jsfiles": [
+        "regreport.js"
+      ]
+    }
+  }
+}

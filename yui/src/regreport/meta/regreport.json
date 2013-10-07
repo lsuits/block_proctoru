@@ -1,0 +1,8 @@
+{
+  "moodle-block_proctoru-regreport": {
+    "requires": [
+        "datatable",
+        "datatable-scroll"
+    ]
+  }
+}

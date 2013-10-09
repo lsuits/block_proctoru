@@ -14,11 +14,10 @@ class ProctorU {
     
     public function __construct() {
         $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');
-        $this->localWebservicesUrl = get_config('block_proctoru', 'localwebservice_url');
+        $this->localWebservicesUrl            = get_config('block_proctoru', 'localwebservice_url');
     }
 
     /**
-     * 
      * @global type $DB
      * @param type $params
      * @return \stdClass
@@ -27,17 +26,17 @@ class ProctorU {
         global $DB;
 
         if (!$field = $DB->get_record('user_info_field', $params)) {
-            $field = new stdClass;
-            $field->shortname = $params['shortname'];
-            $field->name = get_string($field->shortname, 'block_proctoru');
+            $field              = new stdClass;
+            $field->shortname   = $params['shortname'];
+            $field->name        = get_string($field->shortname, 'block_proctoru');
             $field->description = get_string('profilefield_shortname', 'block_proctoru');
             $field->descriptionformat = 1;
-            $field->datatype = 'text';
-            $field->categoryid = $params['categoryid'];
-            $field->locked  = 1;
-            $field->visible = 1;
-            $field->param1  = 30;
-            $field->param2  = 2048;
+            $field->datatype    = 'text';
+            $field->categoryid  = $params['categoryid'];
+            $field->locked      = 1;
+            $field->visible     = 1;
+            $field->param1      = 30;
+            $field->param2      = 2048;
 
             $field->id = $DB->insert_record('user_info_field', $field);
         }
@@ -47,10 +46,13 @@ class ProctorU {
 
     /**
      * Determine whether the user is proctoru-registered or exempt.
-     * Admins are exempt and return true
-     * Users having any instance of any role specified in the admin settings
+     * 
+     * - Admins are exempt and return true
+     * 
+     * - Users having any instance of any role specified in the admin settings
      * for this block are exempt and return true
-     * Users aready having a value == 'registered' in their custom 
+     * 
+     * - Users aready having a value == 'registered' in their custom 
      * proctoru profile field return true
      *
      * @return type
@@ -80,8 +82,8 @@ class ProctorU {
     }
 
     public function userHasExemptRole() {
-        $paths = $this->getFlattenedUserAccessContextPaths();
-        $userRoles = $paths ? array_values($paths) : false;
+        $paths       = $this->getFlattenedUserAccessContextPaths();
+        $userRoles   = $paths ? array_values($paths) : false;
         $rolesExempt = explode(',', get_config('block_proctoru', 'roleselection'));
 
         if (!$userRoles || empty($rolesExempt)) {
@@ -158,11 +160,21 @@ class ProctorU {
         
     }
     
-    
+    /**
+     * Get the set of userids that do not exist in the 
+     * role assignments table with any role occurring in the 
+     * admin roles-exempt setting.
+     * 
+     * @global stdClass $DB
+     * @return itn[] userids
+     */
     public static function arrFetchNonExemptUserids() {
         global $DB;
         $rolesExempt = get_config('block_proctoru', 'roleselection');
-        $sql = sprintf('SELECT DISTINCT userid FROM {role_assignments} WHERE roleid NOT IN (%s)', $rolesExempt);
+        $sql         = sprintf('SELECT DISTINCT userid 
+                                FROM {role_assignments} 
+                                WHERE roleid NOT IN (%s)', 
+                            $rolesExempt);
         return array_keys($DB->get_records_sql($sql));
     }
     
@@ -227,11 +239,50 @@ class ProctorU {
                     FROM   {user_info_field}
                     WHERE  shortname = '{$shortname}'
                     )
+                AND u.suspended = 0
                 {$userfilter} {$dataFilter} {$sort} {$limit}";
-
+        
         $query = sprintf($sql,$shortname);
-
+echo $query;
         return $DB->get_records_sql($query);
     }
+    
+    
+/**
+ * Partial application of the datalib.php function get_users_listing tailored to 
+ * the task at hand
+ * 
+ * Return filtered (if provided) list of users in site, except guest and deleted users.
+ *
+ * @param string $sort          PASSTHROUGH An SQL field to sort by
+ * @param string $dir           PASSTHROUGH The sort direction ASC|DESC
+ * @param int $page             PASSTHROUGH The page or records to return
+ * @param int                   PASSTHROUGH $recordsperpage The number of records to return per page
+ * @param string                PASSTHROUGH(|IGNORE) $search A simple string to search for
+ * @param string $firstinitial  PASSTHROUGH Users whose first name starts with $firstinitial
+ * @param string $lastinitial   PASSTHROUGH Users whose last name starts with $lastinitial
+ * @param string $extraselect   An additional SQL select statement to append to the query
+ * @param array $extraparams    Additional parameters to use for the above $extraselect
+ * @param stdClass $extracontext If specified, will include user 'extra fields'
+ *   as appropriate for current user and given context
+ * @return array Array of {@link $USER} records
+ */
+public function partial_get_users_listing($sort='lastaccess', $dir='ASC', $page=0, $recordsperpage=0,
+                           $search='', $firstinitial='', $lastinitial='',$status= null) {
+
+    global $DB;
+    $fieldid = $DB->get_field('user_info_field','id', array('shortname'=>'user_proctoru'));
+    $status = PROCTORU::VERIFIED; 
+    //the extraselect needs to vary to allow the user to specify 'is not empty', etc
+    $extraselect="id  IN  (SELECT userid FROM {user_info_data} WHERE fieldid={$fieldid}  AND data = :profilefield)";
+    $extraparams=array('profilefield' => $status);
+    $extracontext= context_system::instance();
+    
+    return get_users_listing($sort,$dir,$page,$recordsperpage,$search,
+            $firstinitial,$lastinitial, $extraselect, $extraparams, $extracontext);
+
+    }
+            
+            
 }
 ?>

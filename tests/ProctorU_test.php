@@ -1,21 +1,18 @@
 <?php
 global $CFG;
 require_once $CFG->dirroot . '/blocks/proctoru/lib.php';
+require_once $CFG->dirroot . '/blocks/proctoru/tests/abstract_testcase.php';
 require_once $CFG->dirroot . '/blocks/proctoru/tests/conf/ConfigProctorU.php';
 
-class ProctorU_testscase extends advanced_testcase{
-    public $conf;
-    public $pu;
+class ProctorU_testcase extends abstract_testcase{
+    
     
     public function setup(){
-        $this->resetAfterTest();
-
-        //init local config
-        $this->conf = new ConfigProctorU();
-        $this->conf->setConfigs();
-
-        $this->pu = new ProctorU();
-
+        parent::setup();
+        global $DB;
+        //map lookup is a little anonymous; refactor the map to make semantic sense
+        $this->assertEquals($this->conf->config[1][1], get_config('block_proctoru','roleselection'));
+        $this->assertNotEmpty($DB->get_record('user_info_field',array('shortname' => 'user_proctoru')));
         $this->assertNotEmpty(get_config('block_proctoru','localwebservice_url'));
         
         $this->assertNotEmpty($this->pu->localWebservicesUrl);
@@ -74,90 +71,16 @@ class ProctorU_testscase extends advanced_testcase{
                 Problem validating input parameters.
             </ERROR_MSG>  
         </RESULTS>";
+    }
+    
 
-//        $this->pu->getLocalWebservicesCredentials();
-//        $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
-//
-//        $this->assertNotEmpty($this->pu->localWebservicesUrl);
-//        $resp = $this->pu->intGetPseudoId($user->id);
-//
-//        $xdoc = new DOMDocument();
-//        $xdoc->loadXML($resp);
-//        $this->assertXmlStringNotEqualsXmlString($dasInvalidParamsResponse, $resp);
-    }
     
-    private function setProfileField($userid, $value){
-        global $DB;
-        $shortname = get_config('block_proctoru', 'profilefield_shortname');
-        
-        //create profile field
-        $fieldParams = array(
-            'shortname' => get_string('profilefield_shortname', 'block_proctoru'),
-            'categoryid' => 1,
-        );
-        $this->pu->default_profile_field($fieldParams);
-        
-        $fieldId = $DB->get_field('user_info_field', 'id', array('shortname'=>$shortname));
-        
-        $fieldData = new stdClass();
-        $fieldData->userid  = $userid;
-        $fieldData->fieldid = $fieldId;
-        $fieldData->data    = $value;
-        $fieldData->dataFormat = 0;
-        
-        $DB->insert_record('user_info_data',$fieldData, true, false);
-    }
-    
-//    public function test_arrFetchRegisteredStatusByUserid(){
-//
-//        $gen = $this->getDataGenerator();
-//        
-//        //check for verified users
-//        $verifiedUser = $gen->create_user();
-//        $this->setProfileField($verifiedUser->id, ProctorU::VERIFIED);
-//        $vUsers = ProctorU::arrFetchRegisteredStatusByUserid(array(), ProctorU::VERIFIED);
-//        $this->assertEquals(ProctorU::VERIFIED,$vUsers[$verifiedUser->id]->status);
-//        
-//        
-//        //registered users
-//        $registeredUser = $gen->create_user();
-//        $this->setProfileField($registeredUser->id, ProctorU::REGISTERED);
-//        $rUsers = ProctorU::arrFetchRegisteredStatusByUserid(array(), ProctorU::REGISTERED);
-//        $this->assertEquals(ProctorU::REGISTERED, $rUsers[$registeredUser->id]->status);
-//        
-//        //registered users
-//        $unregisteredUser = $gen->create_user();
-//        $this->setProfileField($unregisteredUser->id, ProctorU::UNREGISTERED);
-//        $uUsers = ProctorU::arrFetchRegisteredStatusByUserid(array(), ProctorU::UNREGISTERED);
-//        $this->assertEquals(ProctorU::UNREGISTERED, $uUsers[$unregisteredUser->id]->status);
-//        
-//        
-//        //check that filtering with userids works as expected
-//        $includeFilter = array($unregisteredUser->id, $registeredUser->id);
-//        $onlyTwo = ProctorU::arrFetchRegisteredStatusByUserid($includeFilter);
-//        $this->assertEquals(count($includeFilter),count($onlyTwo));
-//        $this->assertArrayNotHasKey($verifiedUser->id, $onlyTwo);
-//        $this->assertArrayHasKey($unregisteredUser->id, $onlyTwo);
-//        $this->assertArrayHasKey($registeredUser->id, $onlyTwo);
-//    }
-    
-    public function test_partial_get_users_listing(){
-        global $DB;
-        $data = $this->conf;
-        $gen  = $this->getDataGenerator();
-        $customFieldId = $DB->get_field('user_info_field', 'id', array('shortname'=>'user_proctoru'));
-        var_dump($data);
-        $userNotFound = $gen->create_user($data['testUser1']);
-        $userProfileNotFound = array(
-            'userid'    => $userNotFound->id,
-            'fiedlid'   => $customFieldId,
-            'data'      => ProctorU::REGISTERED
-        );
-        $DB->insert_record('user_info_data',(object) $userProfileNotFound);
-        
-        $this->setAdminUser();
-        $unit = $this->pu->partial_get_users_listing();
-        $this->assertEquals(2, count($unit));
+    public function test_objGetExemptRoles(){
+        $config = explode(',',get_config('block_proctoru', 'roleselection'));
+        $unit   = $this->pu->objGetExemptRoles();
+
+        $this->assertEquals(count($config), count($unit));
+        $this->assertEmpty(array_diff(array_keys($unit), $config));
     }
 }
 ?>

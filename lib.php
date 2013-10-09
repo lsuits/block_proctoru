@@ -2,6 +2,7 @@
 
 global $CFG;
 require_once $CFG->libdir . '/filelib.php';
+require_once($CFG->dirroot.'/user/filters/profilefield.php');
 
 class ProctorU {
 
@@ -243,7 +244,7 @@ class ProctorU {
                 {$userfilter} {$dataFilter} {$sort} {$limit}";
         
         $query = sprintf($sql,$shortname);
-echo $query;
+//echo $query;
         return $DB->get_records_sql($query);
     }
     
@@ -262,27 +263,68 @@ echo $query;
  * @param string $firstinitial  PASSTHROUGH Users whose first name starts with $firstinitial
  * @param string $lastinitial   PASSTHROUGH Users whose last name starts with $lastinitial
  * @param string $extraselect   An additional SQL select statement to append to the query
- * @param array $extraparams    Additional parameters to use for the above $extraselect
+ * @param array  $extraparams   Additional parameters to use for the above $extraselect
  * @param stdClass $extracontext If specified, will include user 'extra fields'
  *   as appropriate for current user and given context
  * @return array Array of {@link $USER} records
  */
-public function partial_get_users_listing($sort='lastaccess', $dir='ASC', $page=0, $recordsperpage=0,
-                           $search='', $firstinitial='', $lastinitial='',$status= null) {
+public static function partial_get_users_listing($status= null,$sort='lastaccess', $dir='ASC', $page=0, $recordsperpage=0,
+                           $search='', $firstinitial='', $lastinitial='') {
 
     global $DB;
-    $fieldid = $DB->get_field('user_info_field','id', array('shortname'=>'user_proctoru'));
-    $status = PROCTORU::VERIFIED; 
-    //the extraselect needs to vary to allow the user to specify 'is not empty', etc
-    $extraselect="id  IN  (SELECT userid FROM {user_info_data} WHERE fieldid={$fieldid}  AND data = :profilefield)";
-    $extraparams=array('profilefield' => $status);
+    // $status = PROCTORU::VERIFIED; 
+    // echo $status;
+    // the extraselect needs to vary to allow the user to specify 'is not empty', etc
+    $proFilter  = new user_filter_profilefield('profile','Profile',1);
+
+    if(!isset($status)){
+        $extraselect = '';
+        $extraparams = array();
+    }else{
+        //figure out which field key the filter function uses for our field
+        $fieldKey = null;
+        $fieldShortname = "user_".get_config('block_proctoru', 'profilefield_shortname');
+        foreach($proFilter->get_profile_fields() as $k=>$sn){
+            if($sn == $fieldShortname){
+                $fieldKey = $k;
+            }
+        }
+
+        $data['profile'] = $fieldKey;
+        switch($status){
+            case ProctorU::UNREGISTERED:
+                $data['operator']   = 6;
+                $data['value']      = '';
+                break;
+            case ProctorU::REGISTERED:
+                $data['operator']   = 2;
+                $data['value']      = ProctorU::REGISTERED;
+                break;
+            case ProctorU::VERIFIED:
+                $data['operator']   = 2;
+                $data['value']      = ProctorU::VERIFIED;
+                break;
+        }
+        list($extraselect, $extraparams) = $proFilter->get_sql_filter($data);
+    }
+
     $extracontext= context_system::instance();
     
     return get_users_listing($sort,$dir,$page,$recordsperpage,$search,
             $firstinitial,$lastinitial, $extraselect, $extraparams, $extracontext);
-
     }
-            
+    
+    public static function partial_get_users_listing_by_role(){
+        $roFilter = new user_filter_courserole('role', 'Role', 1);
+        $rolesExempt = $this->objGetExemptRoles();
+    }
+    
+    
+    public function objGetExemptRoles(){
+        global $DB;
+        $rolesConfig = get_config('block_proctoru', 'roleselection');
+        return $DB->get_records_list('role', 'id', explode(',', $rolesConfig));
+    }
             
 }
 ?>

@@ -9,6 +9,62 @@ class ProctorUCronProcessor {
         $this->localDataStore = new LocalDataStoreClient();
     }
 
+    /**
+     * get a list of users that need to have a status assigned
+     */
+    public function blnUpdateNewUsers(){
+        global $DB;
+        $reg    = array_keys(ProctorU::partial_get_users_listing(ProctorU::REGISTERED));
+        
+        $unreg  = array_keys($this->objGetUnregisteredUsers());
+        
+        $verif  = array_keys($this->objGetVerifiedUsers());
+        
+        $havePUStatus = array_merge($reg, $unreg, $verif);
+        $all    = array_keys($DB->get_records('user'));
+        $diff = array_diff($reg, $unreg);
+        
+        return $diff;
+    }
+    
+    public function objGetAllUsers(){
+        global $DB;
+        return $DB->get_records('user');
+    }
+    
+    public function objGetAllProctorUsers(){
+        return $this->objGetUnregisteredUsers() +
+                $this->objGetRegisteredUsers()  +
+                $this->objGetVerifiedUsers();
+    }
+    
+    public function objGetAllUsersWithoutProctorStatsus(){
+        assert(is_array($this->objGetAllProctorUsers()));
+        $all = $this->objGetAllUsers();
+
+        $ids = array_diff(
+                array_keys($all),
+                array_keys($this->objGetAllProctorUsers())
+                );
+        return array_intersect_key($all, array_flip($ids));
+    }
+    
+    public function objGetAllExemptUsers(){
+        
+    }
+    
+    public function objGetUnregisteredUsers(){
+        return ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
+    }
+    
+    public function objGetRegisteredUsers(){
+        return ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
+    }
+    
+    public function objGetVerifiedUsers(){
+        return ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
+    }
+    
 
     /**
      * @TODO allow this to be parameterized during corn
@@ -21,7 +77,7 @@ class ProctorUCronProcessor {
         $limit=10;
         
 //        $userids = empty($userids) ? ProctorU::arrFetchNonExemptUserids() :$userids;
-        $users   = ProctorU::arrFetchRegisteredStatusByUserid($filter,$status,$userfields,$sort,$limit);
+        $users   = ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
         
         foreach($users as $u){
             $status = $this->constProcessUser($u);

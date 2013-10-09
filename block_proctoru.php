@@ -54,6 +54,7 @@ class block_proctoru extends block_base {
             mtrace(sprintf("Running ProctorU cron tasks"));
             $testUsers = array(33514);
             $cron = new ProctorUCronProcessor();
+            $cron->blnUpdateNewUsers();
             $cron->blnProcessUsers(array(),null,array(), "", $limit=10);
         } else {
             mtrace("Skipping ProctorU");

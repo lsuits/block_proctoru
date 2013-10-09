@@ -38,7 +38,6 @@ class block_proctoru_renderer extends plugin_renderer_base {
     }
     
     public function render_registration_report(registration_report $report) {
-
         $this->page->requires->yui_module(
             'moodle-block_proctoru-regreport', 
             'M.block_proctoru.regreport.init',
@@ -56,18 +55,7 @@ class registration_report implements renderable {
     public $data;
 
     public function __construct(){
-        $userfields = explode(',',user_picture::fields('', array('idnumber')));
-        
-        $exempt = ProctorU::arrFetchNonExemptUserids();
-        
-        $this->data = ProctorU::arrFetchRegisteredStatusByUserid(
-                $exempt,
-                null,
-                $userfields,
-                '', 
-                1000,
-                0);
-        
+        $this->data = ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
     }
 }
 

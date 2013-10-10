@@ -12,73 +12,20 @@ class ProctorUCronProcessor {
     /**
      * get a list of users that need to have a status assigned
      */
-    public function blnUpdateNewUsers(){
+    public function blnUpdateNewUsersAsExempt(){
         global $DB;
-        $reg    = array_keys(ProctorU::partial_get_users_listing(ProctorU::REGISTERED));
+        foreach(ProctorU::objGetAllUsersWithoutProctorStatus() as $unreg){
+            $data = new stdClass();
+            $data->userid   = $unreg->id;
+            $data->fieldid  = ProctorU::intCustomFieldID();
+            $data->data     = ProctorU::UNREGISTERED;
+            mtrace(sprintf("Setting status unregistered for user %d", $unreg->id));
+            $DB->insert_record('user_info_data',$data, false);//consider donig this as a bulk operation
+        }
         
-        $unreg  = array_keys($this->objGetUnregisteredUsers());
-        
-        $verif  = array_keys($this->objGetVerifiedUsers());
-        
-        $havePUStatus = array_merge($reg, $unreg, $verif);
-        $all    = array_keys($DB->get_records('user'));
-        $diff = array_diff($reg, $unreg);
-        
-        return $diff;
     }
-    
-    public function objGetAllUsers(){
-        global $DB;
-        return $DB->get_records('user');
-    }
-    
-    public function objGetAllProctorUsers(){
-        return $this->objGetUnregisteredUsers() +
-                $this->objGetRegisteredUsers()  +
-                $this->objGetVerifiedUsers();
-    }
-    
-    public function objGetAllUsersWithoutProctorStatsus(){
-        assert(is_array($this->objGetAllProctorUsers()));
-        $all = $this->objGetAllUsers();
 
-        $ids = array_diff(
-                array_keys($all),
-                array_keys($this->objGetAllProctorUsers())
-                );
-        return array_intersect_key($all, array_flip($ids));
-    }
-    
-    public function objGetAllExemptUsers(){
-        
-    }
-    
-    public function objGetUnregisteredUsers(){
-        return ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
-    }
-    
-    public function objGetRegisteredUsers(){
-        return ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
-    }
-    
-    public function objGetVerifiedUsers(){
-        return ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
-    }
-    
-
-    /**
-     * @TODO allow this to be parameterized during corn
-     */
-    public function blnProcessUsers(){
-        $filter = ProctorU::arrFetchNonExemptUserids();
-        $status = "*"; //TODO: this needs to make better semantic sense
-        $userfields = array();
-        $sort="";
-        $limit=10;
-        
-//        $userids = empty($userids) ? ProctorU::arrFetchNonExemptUserids() :$userids;
-        $users   = ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
-        
+    public function blnProcessUsers($users){        
         foreach($users as $u){
             $status = $this->constProcessUser($u);
             ProctorU::intSaveProfileFieldStatus($u->id, $status);
@@ -86,7 +33,9 @@ class ProctorUCronProcessor {
     }
     
     public function constProcessUser($u){
-//        mtrace(sprintf("Processing user with idnumer %s", $u->idnumber));
+        if(!isset($u->idnumber)){
+            return ProctorU::UNREGISTERED;
+        }
         if(!$this->localDataStore->blnUserExists($u->idnumber)){
 //            mtrace(sprintf("User %d is NOT registered", $u->id));
             return ProctorU::UNREGISTERED;
@@ -97,7 +46,7 @@ class ProctorUCronProcessor {
             $puClient = new ProctorUClient();
             if($puClient->blnUserStatus($pseudoID)){
                 $path = $puClient->filGetUserImage($pseudoID);
-                $this->blnInsertPicture($path, $u->id);
+//                $this->blnInsertPicture($path, $u->id);
                 return ProctorU::VERIFIED;
             }else{
                 return ProctorU::REGISTERED;

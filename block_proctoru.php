@@ -6,7 +6,7 @@ require_once 'Cronlib.php';
 class block_proctoru extends block_base {
 
     public $field;
-    public $pu;
+    
     
     public function has_config() {
         return true;
@@ -14,13 +14,12 @@ class block_proctoru extends block_base {
 
     public function init() {
 
-        $this->pu = new ProctorU();
         $this->title = get_string('pluginname', 'block_proctoru');
         $fieldParams = array(
             'shortname' => get_string('profilefield_shortname', 'block_proctoru'),
             'categoryid' => 1,
         );
-        $this->field = $this->pu->default_profile_field($fieldParams);
+        $this->field = ProctorU::default_profile_field($fieldParams);
     }
 
     public function applicable_formats() {
@@ -28,7 +27,7 @@ class block_proctoru extends block_base {
     }
 
     public function get_content() {
-        global $COURSE;
+        global $COURSE, $USER;
         if ($this->content !== null) {
             return $this->content;
         }
@@ -37,13 +36,15 @@ class block_proctoru extends block_base {
         $excluded = in_array($COURSE->id,$public);
 
         $this->content = new stdClass();
+        $acceptableStatus = ProctorU::blnUserHasAcceptableStatus($USER->id);
+        $hasExemptRole    = ProctorU::blnUserHasExemptRole($USER->id);
 
-        if ($this->pu->userHasRegistration()) {
+        if ($acceptableStatus or $hasExemptRole) {
             return $this->content;
         } elseif(!$excluded){
             header("Location: /blocks/proctoru/index.php");
         } else {
-
+            //what?
         }
     }
 
@@ -52,10 +53,12 @@ class block_proctoru extends block_base {
 
         if (get_config('block_proctoru','bool_cron' == 1)) {
             mtrace(sprintf("Running ProctorU cron tasks"));
-            $testUsers = array(33514);
             $cron = new ProctorUCronProcessor();
-            $cron->blnUpdateNewUsers();
-            $cron->blnProcessUsers(array(),null,array(), "", $limit=10);
+            $cron->blnUpdateNewUsersAsExempt();
+            
+            $unregistered = ProctorU::objGetUnregisteredUsers();
+
+            $cron->blnProcessUsers($unregistered);
         } else {
             mtrace("Skipping ProctorU");
         }

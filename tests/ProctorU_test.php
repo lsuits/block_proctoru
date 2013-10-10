@@ -20,48 +20,6 @@ class ProctorU_testcase extends abstract_testcase{
         $this->assertInternalType('string', $this->pu->localWebservicesUrl);
     }
 
-    public function test_getMoodleUser(){
-        $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
-        
-        $unit = $this->pu->usrGetMoodleUser($user->id);
-        $this->assertObjectHasAttribute('idnumber', $unit);
-        $this->assertEquals($user->idnumber, $unit->idnumber);
-    }
-    
-    public function test_userHasExemptRole(){
-        global $USER;
-        $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
-        $this->setUser($user);
-        $USER->access = $this->conf->data['teacherAccessArray'];
-        
-        $this->assertTrue($this->pu->userHasExemptRole());
-    }
-
-    public function test_getFlattenedUserAccessContextPathsForStudent(){
-        global $USER;
-        $user = $this->getDataGenerator()->create_user($this->conf->data['testUser1']);
-
-        $course1 = $this->getDataGenerator()->create_course();
-        $this->getDataGenerator()->enrol_user($user->id, $course1->id);
-
-        $this->setUser($user);
-        $USER->access = $this->conf->data['studentAccessArray'];
-
-        $unit = $this->pu->getFlattenedUserAccessContextPaths();
-        $this->assertTrue($unit != false);
-
-        $this->assertNotEmpty($unit);
-        $this->assertTrue(is_array($unit));
-        $this->assertEquals(3, count($unit));
-        $this->assertArrayHasKey('/1', $unit);
-        $this->assertArrayHasKey('/1/2', $unit);
-        $this->assertArrayHasKey('/1/3/2345', $unit);
-        
-        $exemptRoles  = explode(',',get_config('block_proctoru', 'roleselection'));
-        $userHasRoles = array_values($unit);
-        $this->assertEmpty(array_intersect($exemptRoles, $userHasRoles)); //using student sample data
-        $this->assertFalse($this->pu->userHasExemptRole());
-    }
     
     public function test_ensureLocalUserExists(){
         $dasInvalidParamsResponse = 
@@ -73,6 +31,17 @@ class ProctorU_testcase extends abstract_testcase{
         </RESULTS>";
     }
     
+    public function test_intCustomFieldID(){
+        global $DB;
+        $conf = get_config('block_proctoru',$this->conf->config[2][0]);
+        $id   = $DB->get_field('user_info_field','id',array('shortname' => "user_".$conf));
+        $this->assertEquals($id, ProctorU::intCustomFieldID());
+    }
+    
+    public function test_userHasProctoruProfileFieldValue(){
+        $u = $this->getDataGenerator()->create_user();
+        $this->assertFalse(ProctorU::userHasProctoruProfileFieldValue($u->id));
+    }
 
     
     public function test_objGetExemptRoles(){
@@ -81,6 +50,24 @@ class ProctorU_testcase extends abstract_testcase{
 
         $this->assertEquals(count($config), count($unit));
         $this->assertEmpty(array_diff(array_keys($unit), $config));
+    }
+    
+    public function test_partial_get_users_listing_by_roleid(){
+
+        $teachers = ProctorU::partial_get_users_listing_by_roleid($this->teacherRoleId);
+        $students = ProctorU::partial_get_users_listing_by_roleid($this->studentRoleId);
+        $this->assertEquals(1, count($teachers));
+
+        $this->assertEquals(4, count($students));
+    }
+    
+    public function test_objGetExemptUsers() {
+        $exempt = ProctorU::objGetExemptUsers();
+        assert(count($exempt)>0);
+        
+        $this->assertEquals(1,count($exempt));
+        $admin = array_pop($exempt);
+        $this->assertEquals('teacher', $admin->username);
     }
 }
 ?>

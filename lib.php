@@ -12,6 +12,7 @@ class ProctorU {
     const UNREGISTERED  = 0;
     const REGISTERED    = 1;
     const VERIFIED      = 2;
+    const EXEMPT        = 3;
     
     public function __construct() {
         $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');
@@ -19,11 +20,12 @@ class ProctorU {
     }
 
     /**
+     * insert new record into {user_info_field}
      * @global type $DB
      * @param type $params
      * @return \stdClass
      */
-    public function default_profile_field($params) {
+    public static function default_profile_field($params) {
         global $DB;
 
         if (!$field = $DB->get_record('user_info_field', $params)) {
@@ -44,6 +46,24 @@ class ProctorU {
 
         return $field;
     }
+    
+    /**
+     * helper fn
+     * @return string shortname of the custom field in the DB
+     */
+    public static function strFieldname() {
+        return "user_".get_config('block_proctoru','profilefield_shortname');
+    }
+    
+    /**
+     * helper fn returning the record ID of the custom field
+     * @global type $DB
+     * @return int ID of the custom field
+     */
+    public static function intCustomFieldID(){
+        global $DB;
+        return $DB->get_field('user_info_field', 'id', array('shortname'=>self::strFieldname()));
+    }
 
     /**
      * Determine whether the user is proctoru-registered or exempt.
@@ -58,13 +78,13 @@ class ProctorU {
      *
      * @return type
      */
-    public function userHasRegistration() {
+    public static function userHasRegistration() {
         global $USER;
         require_login();
 
         $admin      = is_siteadmin($USER->id);
-        $exempt     = $this->userHasExemptRole();
-        $registered = $this->userHasProctoruProfileFieldValue();
+        $exempt     = self::userHasExemptRole();
+        $registered = self::userHasProctoruProfileFieldValue();
 
         return $admin or $exempt or $registered;
     }
@@ -74,16 +94,40 @@ class ProctorU {
      * @global stdClass $USER
      * @return stdClass|false
      */
-    public function userHasProctoruProfileFieldValue() {
-        global $USER;
-
-        $custField = get_config('block_proctoru', 'infofield_shortname');
-        //@TODO handle specific values, not just non-null
-        return isset($USER->profile[$custField]) ? $USER->profile[$custField] : false;
+    public static function userHasProctoruProfileFieldValue($userid) {
+        global $DB;
+        return $DB->get_field('user_info_data','data',array('id'=>$userid, 'fieldid'=>self::intCustomFieldID()));
+    }
+    
+    public static function blnUserHasAcceptableStatus($userid) {
+        $status = self::userHasProctoruProfileFieldValue($userid);
+        if($status == ProctorU::VERIFIED || $status == ProctorU::EXEMPT){
+            
+            return true;
+        }elseif(self::userHasExemptRole()){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    public static function blnUserHasExemptRole($userid){
+        global $DB;
+        $exemptRoleIds = get_config('block_proctoru', 'roleselection');
+        $sql = "SELECT id
+                FROM {role_assignments} 
+                WHERE roleid IN ({$exemptRoleIds}) AND userid = {$userid}";
+                
+        $intRoles = count($DB->get_records_sql($sql));
+        return  $intRoles > 0 ? true : false;
     }
 
-    public function userHasExemptRole() {
-        $paths       = $this->getFlattenedUserAccessContextPaths();
+    /**
+     * return true if user has a role in the exempt config list
+     * @return boolean
+     */
+    public static function userHasExemptRole() {
+        $paths       = self::getFlattenedUserAccessContextPaths();
         $userRoles   = $paths ? array_values($paths) : false;
         $rolesExempt = explode(',', get_config('block_proctoru', 'roleselection'));
 
@@ -102,7 +146,7 @@ class ProctorU {
      * @global type $USER
      * @return boolean|mixed
      */
-    public function getFlattenedUserAccessContextPaths() {
+    public static function getFlattenedUserAccessContextPaths() {
         global $USER;
         if (!isset($USER->access['ra'])) {
             return false;
@@ -117,12 +161,6 @@ class ProctorU {
         return $mapPathRoles;
     }
     
-    public function usrGetMoodleUser($userId) {
-        global $DB;
-        $user = $DB->get_record('user', array('id' => $userId));
-        return $user;
-    }
-    
     /**
      * 
      * @global type $DB
@@ -133,18 +171,16 @@ class ProctorU {
     public static function intSaveProfileFieldStatus($userid, $status){
         global $DB;
         $msg = sprintf("Setting ProctorU status for user %s: ", $userid);
-        //@TODO put these lookups into some method or class var
-        $shortname = get_config('block_proctoru', 'profilefield_shortname'); 
-        $fieldId = $DB->get_field('user_info_field', 'id', array('shortname'=>'user_'.$shortname));
-        
+
+        $fieldId = self::intCustomFieldID();
+
         $record  = $DB->get_record('user_info_data', array('userid'=>$userid, 'fieldid'=>$fieldId));
         
         if(!$record){
             $record = new stdClass();
-            $record->data = $status; //DRY
+            $record->data = $status;
             $record->userid = $userid;
             $record->fieldid = $fieldId;
-            $record->dataformat = 0; //why
             
             mtrace(sprintf("%sInsert new record, status %s", $msg,$status));
             return $DB->insert_record('user_info_data',$record, true, false);
@@ -314,16 +350,70 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
             $firstinitial,$lastinitial, $extraselect, $extraparams, $extracontext);
     }
     
-    public static function partial_get_users_listing_by_role(){
-        $roFilter = new user_filter_courserole('role', 'Role', 1);
-        $rolesExempt = $this->objGetExemptRoles();
+    public static function partial_get_users_listing_by_roleid($roleid){
+        $roFilter     = new user_filter_courserole('role', 'Role', 1);
+        $data         = array('value'=>false, 'roleid'=>$roleid, 'categoryid'=>0);
+        $extracontext = context_system::instance();
+        
+        list($extraselect, $extraparams) = $roFilter->get_sql_filter($data);
+        
+        return get_users_listing('','',null,null,'',
+            '','', $extraselect, $extraparams, $extracontext);
     }
     
-    
-    public function objGetExemptRoles(){
+    /**
+     * 
+     * @global type $DB
+     * @return object[] role records of type stdClass, keyed by id
+     */
+    public static function objGetExemptRoles(){
         global $DB;
         $rolesConfig = get_config('block_proctoru', 'roleselection');
         return $DB->get_records_list('role', 'id', explode(',', $rolesConfig));
+    }
+    
+    public static function objGetExemptUsers() {
+        $exemptRoles = self::objGetExemptRoles();
+        $exempt = array();
+        foreach (array_keys($exemptRoles) as $roleid) {
+            $exempt += ProctorU::partial_get_users_listing_by_roleid($roleid);
+        }
+        return $exempt;
+    }
+    
+        
+    public static function objGetAllUsers(){
+        global $DB;
+        return $DB->get_records('user');
+    }
+    
+    public static function objGetAllUsersWithProctorStatus(){
+        return self::objGetUnregisteredUsers() +
+                self::objGetRegisteredUsers()  +
+                self::objGetVerifiedUsers();
+    }
+    
+    public static function objGetAllUsersWithoutProctorStatus(){
+        assert(is_array(self::objGetAllUsersWithProctorStatus()));
+        $all = self::objGetAllUsers();
+
+        $ids = array_diff(
+                array_keys($all),
+                array_keys(self::objGetAllUsersWithProctorStatus())
+                );
+        return array_intersect_key($all, array_flip($ids));
+    }
+    
+    public static function objGetUnregisteredUsers(){
+        return ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
+    }
+    
+    public static function objGetRegisteredUsers(){
+        return ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
+    }
+    
+    public static function objGetVerifiedUsers(){
+        return ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
     }
             
 }

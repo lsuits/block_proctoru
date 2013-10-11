@@ -55,6 +55,11 @@ class ProctorU_testcase extends abstract_testcase{
         $DB->insert_record('user_info_data', $status);
         $this->assertTrue(ProctorU::blnUserHasProctoruProfileFieldValue($u->id));
     }
+    
+    public function test_blnUserHasExemptRole(){
+        $this->assertTrue(ProctorU::blnUserHasExemptRole($this->users['teacher']->id));
+        $this->assertFalse(ProctorU::blnUserHasExemptRole($this->users['userUnregistered']->id));
+    }
 
     
     public function test_objGetExemptRoles(){

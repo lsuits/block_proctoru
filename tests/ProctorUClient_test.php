@@ -24,8 +24,10 @@ class ProctorUClient_testcase extends advanced_testcase {
      * and verify that this user's fields agree with 
      * the values we expect for 'hasimage, etc...
      */
-    public function test_LookupFoundUser() {
+    public function test_LookupFoundUser_TestAPI() {
+        $this->class->baseUrl = 'https://apitest.proctoru.com/getStudentProfile';
         $user       = $this->conf->data['testUser2']['pseudoId'];
+
         $response   = $this->class->strRequestUserProfile($user);
         
         $this->assertNotEmpty($response);
@@ -43,7 +45,7 @@ class ProctorUClient_testcase extends advanced_testcase {
     
     public function test_LookupFoundUser_ProductionApi() {
         //be sure we'ere using the prod service
-        $this->class->baseUrl = get_config('block_proctoru', 'proctoru_api_prod');
+        $this->class->baseUrl = 'https://go.proctoru.com/api/getStudentProfile/';
         
         $user       = $this->conf->data['testUser3']['pseudoId'];
         $response   = $this->class->strRequestUserProfile($user);
@@ -64,22 +66,27 @@ class ProctorUClient_testcase extends advanced_testcase {
     }
     
     public function test_intUserStatus_REGISTERED(){
-        $unit = $this->class->blnUserStatus($this->conf->data['testUser2']['pseudoId']);
+        $this->class->baseUrl = 'https://apitest.proctoru.com/getStudentProfile';
+        $unit = $this->class->constUserStatus($this->conf->data['testUser2']['pseudoId']);
         $this->assertEquals(ProctorU::REGISTERED, $unit);
     }
     public function test_intUserStatus_VERIFIED(){
         //be sure we'ere using the prod service
-        $this->class->baseUrl = get_config('block_proctoru', 'proctoru_api_prod');
-        $unit = $this->class->blnUserStatus($this->conf->data['testUser3']['pseudoId']);
+        $this->class->baseUrl = 'https://go.proctoru.com/api/getStudentProfile/';
+        $unit = $this->class->constUserStatus($this->conf->data['testUser3']['pseudoId']);
         $this->assertEquals(ProctorU::VERIFIED, $unit);
     }
-    
+
+    /**
+     * method under test saves a remote file to the data root
+     * using the pseudoid as the filename
+     * @global type $CFG
+     */
     public function test_getImage(){
         global $CFG;
         $userid = $this->conf->data['testUser3']['pseudoId'];
         $unit   = $this->class->filGetUserImage($userid);
 
-        $this->assertTrue($unit);
         $this->assertFileExists($CFG->dataroot.'/'.$userid.'.jpg');
     }
 }

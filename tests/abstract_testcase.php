@@ -5,7 +5,7 @@ require_once $CFG->dirroot . '/blocks/proctoru/Cronlib.php';
 require_once $CFG->dirroot . '/blocks/proctoru/tests/conf/ConfigProctorU.php';
 require_once $CFG->dirroot . '/enrol/externallib.php';
 
-class abstract_testcase extends advanced_testcase{
+abstract class abstract_testcase extends advanced_testcase{
     public $conf;
     public $pu;
     public $cron;

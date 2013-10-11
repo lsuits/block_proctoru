@@ -156,14 +156,14 @@ class ProctorUClient extends CurlXmlClient {
      * @param int $remoteStudentIdnumber 
      * @return int any of the ProctorU class constants
      */
-    public function blnUserStatus($remoteStudentIdnumber){
+    public function constUserStatus($remoteStudentIdnumber){
         $response    = $this->strRequestUserProfile($remoteStudentIdnumber);
-        $strNotFound = isset($response->message) ? strpos($response->message, 'Student Not Found') >= 0 : false;
+        $strNotFound = isset($response->message) && strpos($response->message, 'Student Not Found');
         
         if(!isset($response->data) && $strNotFound){
-            return ProctorU::UNREGISTERED;
+            return ProctorU::ERROR;
         }else{
-            return $response->data->hasimage == true;
+            return $response->data->hasimage == true ? ProctorU::VERIFIED : ProctorU::REGISTERED;
         }
     }
     

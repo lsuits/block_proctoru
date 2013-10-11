@@ -54,8 +54,8 @@ class block_proctoru extends block_base {
         if (get_config('block_proctoru','bool_cron' == 1)) {
             mtrace(sprintf("Running ProctorU cron tasks"));
             $cron = new ProctorUCronProcessor();
-            $cron->blnUpdateNewUsersAsExempt();
-            
+            $cron->blnSetUnregisteredForUsersWithoutStatus();
+            die();
             $unregistered = ProctorU::objGetUnregisteredUsers();
 
             $cron->blnProcessUsers($unregistered);

@@ -67,17 +67,21 @@ class ProctorU {
     }
 
     /**
-     * see if the proctoru custom field exists in the user profile
+     * Simple DB lookup, directly in the {user_info_data} table,
+     * for an occurence of the userid WHERE fieldid = ??
      * @global stdClass $USER
      * @return stdClass|false
      */
-    public static function userHasProctoruProfileFieldValue($userid) {
+    public static function blnUserHasProctoruProfileFieldValue($userid) {
         global $DB;
-        return $DB->get_field('user_info_data','data',array('id'=>$userid, 'fieldid'=>self::intCustomFieldID()));
+        $result = $DB->record_exists('user_info_data',
+                array('id'=>$userid, 'fieldid'=>self::intCustomFieldID()));
+        
+        return $result;
     }
     
     public static function blnUserHasAcceptableStatus($userid) {
-        $status = self::userHasProctoruProfileFieldValue($userid);
+        $status = self::blnUserHasProctoruProfileFieldValue($userid);
         
         if($status == ProctorU::VERIFIED || $status == ProctorU::EXEMPT){
             return true;

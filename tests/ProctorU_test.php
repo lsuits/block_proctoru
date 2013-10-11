@@ -38,9 +38,22 @@ class ProctorU_testcase extends abstract_testcase{
         $this->assertEquals($id, ProctorU::intCustomFieldID());
     }
     
-    public function test_userHasProctoruProfileFieldValue(){
+    public function test_blnUserHasProctoruProfileFieldValue(){
+        global $DB;
+        $DB->delete_records('user');
+        $DB->delete_records('user_info_data');
+        
+        //first try a fresh user 
         $u = $this->getDataGenerator()->create_user();
-        $this->assertFalse(ProctorU::userHasProctoruProfileFieldValue($u->id));
+        $this->assertFalse(ProctorU::blnUserHasProctoruProfileFieldValue($u->id), sprintf("user %s has a value set", $u->id));
+        
+        //now give user a pu status
+        $status = new stdClass();
+        $status->userid  = $u->id;
+        $status->fieldid = ProctorU::intCustomFieldID();
+        $status->data    = ProctorU::UNREGISTERED;
+        $DB->insert_record('user_info_data', $status);
+        $this->assertTrue(ProctorU::blnUserHasProctoruProfileFieldValue($u->id));
     }
 
     
@@ -67,6 +80,39 @@ class ProctorU_testcase extends abstract_testcase{
         $this->getDataGenerator()->create_user(array('username'=>'suspended-user', 'suspended'=>1));
         $unregistered = ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
         $this->assertEquals(2, count($unregistered));
+        
+        
+        //one registered, one verified
+        $registered = ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
+        $this->assertEquals(1, count($registered));
+        
+        $verified = ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
+        $this->assertEquals(1, count($verified));
+    }
+    
+    public function test_objGetAllUsersWithoutProctorStatus_excludesPeopleWithPUStatus() {
+        global $DB;
+        $gen = $this->getDataGenerator();
+        
+        $i= 100;
+        while($i > 0){
+            $gen->create_user();
+            $i--;
+        }
+        //one registered, one verified
+        $registered = ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
+        $this->assertEquals(1, count($registered));
+        
+        $verified = ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
+        $this->assertEquals(1, count($verified));
+        
+        $noStatus = ProctorU::objGetAllUsersWithoutProctorStatus();
+        $fieldid = ProctorU::intCustomFieldID();
+        $sql = "SELECT count(id) FROM {user_info_data} WHERE fieldid = {$fieldid}";
+        $allSql = $DB->get_records_sql($sql);
+        
+        $this->assertFalse(count($allSql) == count($noStatus));
+        $this->assertEquals(102,count($noStatus));
     }
     
     public function test_objGetExemptUsers() {

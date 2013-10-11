@@ -10,20 +10,17 @@ class ProctorUCronProcessor {
     }
 
     /**
-     * get a list of users that need to have a status assigned
+     * Early cron phase:
+     * For any user without a status already,set unregistered.
      */
-    public function blnUpdateNewUsersAsExempt(){
-        global $DB;
+    public function blnSetUnregisteredForUsersWithoutStatus(){
         foreach(ProctorU::objGetAllUsersWithoutProctorStatus() as $unreg){
-            $data = new stdClass();
-            $data->userid   = $unreg->id;
-            $data->fieldid  = ProctorU::intCustomFieldID();
-            $data->data     = ProctorU::UNREGISTERED;
             mtrace(sprintf("Setting status unregistered for user %d", $unreg->id));
-            $DB->insert_record('user_info_data',$data, false);//consider doing this as a bulk operation
+            ProctorU::intSaveProfileFieldStatus($unreg->id, ProctorU::UNREGISTERED);
         }
     }
 
+    
     public function blnProcessUsers($users){        
         foreach($users as $u){
             $status = $this->constProcessUser($u);
@@ -43,7 +40,7 @@ class ProctorUCronProcessor {
 //        mtrace(sprintf("got pseudoID for user %s of %s", $u->id, $pseudoID));
         if($pseudoID !=false){
             $puClient = new ProctorUClient();
-            if($puClient->blnUserStatus($pseudoID)){
+            if($puClient->constUserStatus($pseudoID)){
                 $path = $puClient->filGetUserImage($pseudoID);
 //                $this->blnInsertPicture($path, $u->id);
                 return ProctorU::VERIFIED;

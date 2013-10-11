@@ -406,7 +406,7 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         
     public static function objGetAllUsers(){
         global $DB;
-        return $DB->get_records('user');
+        return $DB->get_records('user', array('suspended'=>0));
     }
     
     public static function objGetAllUsersWithProctorStatus(){
@@ -416,7 +416,7 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
     }
     
     public static function objGetAllUsersWithoutProctorStatus(){
-        assert(is_array(self::objGetAllUsersWithProctorStatus()));
+
         $all = self::objGetAllUsers();
 
         $ids = array_diff(

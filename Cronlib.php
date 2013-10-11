@@ -20,9 +20,8 @@ class ProctorUCronProcessor {
             $data->fieldid  = ProctorU::intCustomFieldID();
             $data->data     = ProctorU::UNREGISTERED;
             mtrace(sprintf("Setting status unregistered for user %d", $unreg->id));
-            $DB->insert_record('user_info_data',$data, false);//consider donig this as a bulk operation
+            $DB->insert_record('user_info_data',$data, false);//consider doing this as a bulk operation
         }
-        
     }
 
     public function blnProcessUsers($users){        

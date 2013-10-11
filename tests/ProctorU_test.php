@@ -61,6 +61,14 @@ class ProctorU_testcase extends abstract_testcase{
         $this->assertEquals(4, count($students));
     }
     
+    public function test_partial_get_users_listing_excludesSuspendedUsers(){
+        //this scenario, defined in abstract_testcase, has 2 non-students, apart from the guest user which is already excluded 
+        //by the library fn get_users_listing; admin + teacher
+        $this->getDataGenerator()->create_user(array('username'=>'suspended-user', 'suspended'=>1));
+        $unregistered = ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
+        $this->assertEquals(2, count($unregistered));
+    }
+    
     public function test_objGetExemptUsers() {
         $exempt = ProctorU::objGetExemptUsers();
         assert(count($exempt)>0);

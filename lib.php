@@ -3,6 +3,7 @@
 global $CFG;
 require_once $CFG->libdir . '/filelib.php';
 require_once($CFG->dirroot.'/user/filters/profilefield.php');
+require_once($CFG->dirroot.'/user/filters/yesno.php');
 
 class ProctorU {
 
@@ -344,6 +345,15 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         list($extraselect, $extraparams) = $proFilter->get_sql_filter($data);
     }
 
+    $suspFilter = new user_filter_yesno('suspended', 'Suspended',1,'suspended');
+    $suspData = array(
+        'value' => "0",
+    );
+    list($suspXSelect, $suspXParams) = $suspFilter->get_sql_filter($suspData);
+    
+    $extraselect .= " AND ".$suspXSelect;
+    $extraparams += $suspXParams;
+    
     $extracontext= context_system::instance();
     
     return get_users_listing($sort,$dir,$page,$recordsperpage,$search,
@@ -356,6 +366,18 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         $extracontext = context_system::instance();
         
         list($extraselect, $extraparams) = $roFilter->get_sql_filter($data);
+        
+        //exclude suspended users
+        {
+            $suspFilter = new user_filter_yesno('suspended', 'Suspended',1,'suspended');
+            $suspData = array(
+                'value' => "0",
+            );
+            list($suspXSelect, $suspXParams) = $suspFilter->get_sql_filter($suspData);
+
+            $extraselect .= " AND ".$suspXSelect;
+            $extraparams += $suspXParams;
+        }
         
         return get_users_listing('','',null,null,'',
             '','', $extraselect, $extraparams, $extracontext);

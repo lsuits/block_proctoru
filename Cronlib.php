@@ -30,14 +30,15 @@ class ProctorUCronProcessor {
     
     public function constProcessUser($u){
         if(!isset($u->idnumber)){
-            return ProctorU::UNREGISTERED;
+            mtrace(sprintf("No idnumber for user with id %d", $u->id));
+            return ProctorU::ERROR;
         }
         if(!$this->localDataStore->blnUserExists($u->idnumber)){
-//            mtrace(sprintf("User %d is NOT registered", $u->id));
+            mtrace(sprintf("User %d is NOT registered with DAS\n", $u->id));
             return ProctorU::UNREGISTERED;
         }
         $pseudoID = $this->localDataStore->intPseudoId($u->idnumber);
-//        mtrace(sprintf("got pseudoID for user %s of %s", $u->id, $pseudoID));
+        mtrace(sprintf("got pseudoID for user %s of %s\n", $u->id, $pseudoID));
         if($pseudoID !=false){
             $puClient = new ProctorUClient();
             if($puClient->constUserStatus($pseudoID)){
@@ -48,6 +49,7 @@ class ProctorUCronProcessor {
                 return ProctorU::REGISTERED;
             }
         }else{
+            mtrace(sprintf("Pseudo id lookup failed with unknown error for user with id %d", $u->id));
             return ProctorU::ERROR;
         }
     }

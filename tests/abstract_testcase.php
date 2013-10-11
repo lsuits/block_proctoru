@@ -75,6 +75,7 @@ abstract class abstract_testcase extends advanced_testcase{
         $this->setProfileField($this->users['userUnregistered']->id, ProctorU::UNREGISTERED);
         $this->setProfileField($this->users['userRegistered']->id,   ProctorU::REGISTERED);
         $this->setProfileField($this->users['userVerified']->id,     ProctorU::VERIFIED);
+        $this->setProfileField($this->users['teacher']->id,          ProctorU::EXEMPT);
     }
     
     protected function setProfileField($userid, $value){
@@ -97,6 +98,22 @@ abstract class abstract_testcase extends advanced_testcase{
         $fieldData->dataFormat = 0;
         
         $DB->insert_record('user_info_data',$fieldData, true, false);
+    }
+    
+    protected function resetUserTables(){
+        global $DB;
+        $DB->delete_records('user');
+        $DB->delete_records('user_info_data');
+    }
+    
+    protected function addNUsersToDatabase($i){
+        $gen = $this->getDataGenerator();
+        
+        $i= 100;
+        while($i > 0){
+            $gen->create_user();
+            $i--;
+        }
     }
 }
 

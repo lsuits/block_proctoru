@@ -80,12 +80,27 @@ class ProctorU {
         return $result;
     }
     
+    /**
+     * Similar to @see ProctorU::blnUserHasProctoruProfileFieldValue()
+     * except that returning boolean exists ?, we return the value in question
+     * @global type $DB
+     * @param type $userid
+     * @return type
+     */
+    public static function constProctorUStatusForUserId($userid){
+        global $DB;
+        $status = $DB->get_field('user_info_data','data',
+                array('userid'=>$userid, 'fieldid'=>self::intCustomFieldID()));
+
+        return $status === false ? false : $status;
+    }
+    
     public static function blnUserHasAcceptableStatus($userid) {
-        $status = self::blnUserHasProctoruProfileFieldValue($userid);
+        $status = self::constProctorUStatusForUserId($userid);
         
         if($status == ProctorU::VERIFIED || $status == ProctorU::EXEMPT){
             return true;
-        }elseif(self::blnUserHasExemptRole()){
+        }elseif(self::blnUserHasExemptRole($userid)){
             return true;
         }else{
             return false;
@@ -193,6 +208,10 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
                 $data['operator']   = 2;
                 $data['value']      = ProctorU::VERIFIED;
                 break;
+            case ProctorU::EXEMPT:
+                $data['operator']   = 2;
+                $data['value']      = ProctorU::EXEMPT;
+                break;
         }
         list($extraselect, $extraparams) = $proFilter->get_sql_filter($data);
     }
@@ -245,7 +264,81 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         $rolesConfig = get_config('block_proctoru', 'roleselection');
         return $DB->get_records_list('role', 'id', explode(',', $rolesConfig));
     }
+
+    public static function objGetAllUsers(){
+        global $DB;
+        //@TODO should be rewritten as a single query
+        $guestUserId  = $DB->get_field('user', 'id', array('username'=>'guest'));
+        $active       = $DB->get_records('user', array('suspended'=>0,'deleted'=>0));
+
+        unset($active[$guestUserId]);
+        return $active;
+    }
     
+    public static function objGetAllUsersWithProctorStatus(){
+        return self::objGetUsersWithStatusUnregistered() +
+                self::objGetUsersWithStatusRegistered()  +
+                self::objGetUsersWithStatusVerified()    +
+                self::objGetUsersWithStatusExempt();
+    }
+    
+    /**
+     * Gets
+     * @return int[]
+     */
+    public static function objGetAllUsersWithoutProctorStatus(){
+
+        $all = self::objGetAllUsers();
+        mtrace(sprintf("found %d users", count($all)));
+
+        $haveStatus = self::objGetAllUsersWithProctorStatus();
+        mtrace(sprintf("found %d users with some PU status", count($haveStatus)));
+        
+        $ids = array_diff(
+                array_keys($all),
+                array_keys($haveStatus)
+                );
+        $haveNoStatus = array_intersect_key($all, array_flip($ids));
+        mtrace(sprintf("found %d users without status", count($haveNoStatus)));
+        return $haveNoStatus;
+    }
+    
+    /**
+     * get users with ProctorU status set to ProctorU::UNREGISTERED
+     * @return object[] array of unregistered users
+     */
+    public static function objGetUsersWithStatusUnregistered(){
+        return ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
+    }
+    
+    /**
+     * get users with ProctorU status set to ProctorU::REGISTERED
+     * @return object[] array of registered users
+     */
+    public static function objGetUsersWithStatusRegistered(){
+        return ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
+    }
+    
+    /**
+     * get users with ProctorU status set to ProctorU::VERIFIED
+     * @return object[] array of verified users
+     */
+    public static function objGetUsersWithStatusVerified(){
+        return ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
+    }
+    
+    /**
+     * get users with ProctorU status set to ProctorU::EXEMPT
+     * @return object[] array of exempt users
+     */
+    public static function objGetUsersWithStatusExempt(){
+        return ProctorU::partial_get_users_listing(ProctorU::EXEMPT);
+    }
+
+    /**
+     * 
+     * @return object[] users having the exempt role in any course
+     */
     public static function objGetExemptUsers() {
         $exemptRoles = self::objGetExemptRoles();
         $exempt = array();
@@ -255,44 +348,6 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         return $exempt;
     }
     
-        
-    public static function objGetAllUsers(){
-        global $DB;
-        $guestUser = $DB->get_field('user', 'id', array('username'=>'guest'));
-        $all = $DB->get_records('user', array('suspended'=>0, 'deleted'=>0));
-        unset($all[$guestUser]);
-        return $all;
-    }
-    
-    public static function objGetAllUsersWithProctorStatus(){
-        return self::objGetUnregisteredUsers() +
-                self::objGetRegisteredUsers()  +
-                self::objGetVerifiedUsers();
-    }
-    
-    public static function objGetAllUsersWithoutProctorStatus(){
-
-        $all = self::objGetAllUsers();
-        mtrace(sprintf("found %d users without PU status", count($all)));
-
-        $ids = array_diff(
-                array_keys($all),
-                array_keys(self::objGetAllUsersWithProctorStatus())
-                );
-        return array_intersect_key($all, array_flip($ids));
-    }
-    
-    public static function objGetUnregisteredUsers(){
-        return ProctorU::partial_get_users_listing(ProctorU::UNREGISTERED);
-    }
-    
-    public static function objGetRegisteredUsers(){
-        return ProctorU::partial_get_users_listing(ProctorU::REGISTERED);
-    }
-    
-    public static function objGetVerifiedUsers(){
-        return ProctorU::partial_get_users_listing(ProctorU::VERIFIED);
-    }
             
 }
 ?>

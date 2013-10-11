@@ -88,7 +88,7 @@ class LocalDataStoreClient extends CurlXmlClient {
     }
 
     public function blnUserExists($idnumber) {
-//        mtrace(sprintf("check user %sexists in DAS", $idnumber));
+        mtrace(sprintf("check user %sexists in DAS", $idnumber));
         $this->addParams();
         $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_userexists_servicename');
         $this->params['1'] = $idnumber;
@@ -104,7 +104,7 @@ class LocalDataStoreClient extends CurlXmlClient {
     }
 
     public function intPseudoId($idnumber){
-//        mtrace(sprintf("fetch PseudoID from DAS for user %s", $idnumber));
+        mtrace(sprintf("fetch PseudoID from DAS for user %s", $idnumber));
         $this->addParams();
         $this->params['serviceId'] = get_config('block_proctoru', 'localwebservice_fetchuser_servicename');
         $this->params['1'] = $idnumber;
@@ -148,6 +148,7 @@ class ProctorUClient extends CurlXmlClient {
      * @return type
      */
     public function strRequestUserProfile($remoteStudentIdnumber) {
+        mtrace(sprintf("fetching PU profile for user id = %s\n", $idnumber));
         return json_decode($this->getCurl($remoteStudentIdnumber, 'getStudentProfile'));
     }
     
@@ -159,8 +160,12 @@ class ProctorUClient extends CurlXmlClient {
     public function constUserStatus($remoteStudentIdnumber){
         $response    = $this->strRequestUserProfile($remoteStudentIdnumber);
         $strNotFound = isset($response->message) && strpos($response->message, 'Student Not Found');
-        
+        $i=0;
         if(!isset($response->data) && $strNotFound){
+            $i++;
+            if($i > 10){
+                die("too many");
+            }
             return ProctorU::ERROR;
         }else{
             return $response->data->hasimage == true ? ProctorU::VERIFIED : ProctorU::REGISTERED;

@@ -7,6 +7,7 @@ class ProctorUCronProcessor {
     
     public function __construct(){
         $this->localDataStore = new LocalDataStoreClient();
+        $this->puClient       = new ProctorUClient();
     }
 
     /**
@@ -14,10 +15,13 @@ class ProctorUCronProcessor {
      * For any user without a status already,set unregistered.
      */
     public function blnSetUnregisteredForUsersWithoutStatus(){
+        $i=0;
         foreach(ProctorU::objGetAllUsersWithoutProctorStatus() as $unreg){
             mtrace(sprintf("Setting status unregistered for user %d", $unreg->id));
             ProctorU::intSaveProfileFieldStatus($unreg->id, ProctorU::UNREGISTERED);
+            $i++;
         }
+        return $i;
     }
 
     
@@ -31,26 +35,33 @@ class ProctorUCronProcessor {
     public function constProcessUser($u){
         if(!isset($u->idnumber)){
             mtrace(sprintf("No idnumber for user with id %d", $u->id));
-            return ProctorU::ERROR;
+            throw new Exception(sprintf(
+                    "Tried fetching data for user with no idnumber.\n
+                        Details:\n
+                        userid: %d\n
+                        username: %s\n",$u->id,$u->username));
         }
         if(!$this->localDataStore->blnUserExists($u->idnumber)){
+
             mtrace(sprintf("User %d is NOT registered with DAS\n", $u->id));
-            return ProctorU::UNREGISTERED;
+            return ProctorU::SAM_HAS_PROFILE_ERROR;
         }
         $pseudoID = $this->localDataStore->intPseudoId($u->idnumber);
         mtrace(sprintf("got pseudoID for user %s of %s\n", $u->id, $pseudoID));
-        if($pseudoID !=false){
-            $puClient = new ProctorUClient();
-            if($puClient->constUserStatus($pseudoID)){
-                $path = $puClient->filGetUserImage($pseudoID);
-//                $this->blnInsertPicture($path, $u->id);
-                return ProctorU::VERIFIED;
+        
+        if($pseudoID != false){
+
+            $puStatus = $this->puClient->constUserStatus($pseudoID);
+            if($puStatus == false){
+                return ProctorU::PU_NOT_FOUND;
             }else{
-                return ProctorU::REGISTERED;
+                $path = $this->puClient->filGetUserImage($pseudoID);
+//                $this->blnInsertPicture($path, $u->id);
+                return $puStatus;
             }
         }else{
             mtrace(sprintf("Pseudo id lookup failed with unknown error for user with id %d", $u->id));
-            return ProctorU::ERROR;
+            return ProctorU::NO_PSEUDO;
         }
     }
     

@@ -13,6 +13,9 @@ abstract class abstract_testcase extends advanced_testcase{
     public $teacherRoleId;
     public $studentRoleId;
     
+    public $localDataStore;
+    public $puClient;
+    
     public function setup(){
         global $DB;
         $this->resetAfterTest();
@@ -30,6 +33,8 @@ abstract class abstract_testcase extends advanced_testcase{
         $this->studentRoleId = $DB->get_field('role', 'id', array('shortname'=>'student'));
         $this->teacherRoleId = $DB->get_field('role', 'id', array('shortname'=>'teacher'));
         
+        $this->localDataStore = new LocalDataStoreClient();
+        $this->puClient      = new ProctorUClient();
         //enroll some users
 //        $this->insertOneUserOfEachFlavor();
 //        $this->enrolUsers();
@@ -87,7 +92,6 @@ abstract class abstract_testcase extends advanced_testcase{
         $this->setProfileField($this->users['userRegistered']->id,   ProctorU::REGISTERED);
         $this->setProfileField($this->users['userVerified']->id,     ProctorU::VERIFIED);
         $this->setProfileField($this->users['teacher']->id,          ProctorU::EXEMPT);
-        $this->assertEquals(4, count($DB->get_records('user_info_data', array('fieldid'=>ProctorU::intCustomFieldID()))));
     }
     
     protected function setProfileField($userid, $value){
@@ -143,11 +147,6 @@ abstract class abstract_testcase extends advanced_testcase{
         }else{
             $this->resetUserTables();
         }
-
-        if($confUsers){
-            $this->enrolTestUsers();
-            $countAll += 4;
-        }
         
         $users = array();
         $users['anonymous']             = $this->addNUsersToDatabase($numAnon);
@@ -164,6 +163,14 @@ abstract class abstract_testcase extends advanced_testcase{
             foreach($v as $user){
                 $this->setProfileField($user->id, $k);
             }
+        }
+        
+        if($confUsers){
+            $this->enrolTestUsers();
+            $numUnreg++;
+            $numReg++;
+            $numVer++;
+            $numExempt++;
         }
         
         $countAll += $numDele + $numSusp + $numAnon + $numUnreg + $numReg + $numVer + $numExempt;
@@ -183,6 +190,27 @@ abstract class abstract_testcase extends advanced_testcase{
         $this->assertEquals($numExempt,count($DB->get_records_select('user_info_data',
                 $select.ProctorU::EXEMPT)));
         $this->assertEquals($countAll, count($DB->get_records('user')));
+    }
+    
+    protected function setClientMode($client, $mode){
+        if($client instanceof LocalDataStoreClient){
+            if($mode == 'prod'){
+                set_config('localwebservice_url',  $this->conf->config[5][1], 'block_proctoru');
+                set_config('credentials_location', $this->conf->config[4][1], 'block_proctoru');
+            }
+            else{
+                set_config('localwebservice_url',  $this->conf->config[6][1], 'block_proctoru');
+                set_config('credentials_location', $this->conf->config[3][1], 'block_proctoru');
+            }
+            $this->cron->localDataStore = new LocalDataStoreClient();
+        }else{
+            if($mode == 'prod'){
+                set_config('proctoru_api', $this->conf->config[12][1], 'block_proctoru');
+            }else{
+                set_config('proctoru_api', $this->conf->config[11][1], 'block_proctoru');
+            }
+            $this->cron->puClient = new ProctorUClient();
+        }
     }
 }
 

@@ -14,6 +14,9 @@ class ProctorU {
     const REGISTERED    = 2;
     const VERIFIED      = 3;
     const EXEMPT        = 4;
+    const SAM_HAS_PROFILE_ERROR = -1;
+    const NO_PSEUDO     = -2;
+    const PU_NOT_FOUND  = -404;
     
     public function __construct() {
         $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');

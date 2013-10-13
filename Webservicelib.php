@@ -96,9 +96,9 @@ class LocalDataStoreClient extends CurlXmlClient {
 
         $xml = $this->xmlFetchResponse();
         
-        if(isset($xml->ERROR_MSG)){
-            throw new Exception(sprintf("Problem obtaining data for service %s, message was %s ",$this->params['serviceId'], $xml->ERROR_MSG));
-        }
+//        if(isset($xml->ERROR_MSG)){
+//            throw new Exception(sprintf("Problem obtaining data for service %s, message was %s ",$this->params['serviceId'], $xml->ERROR_MSG));
+//        }
         
         return (string)$xml->ROW->HAS_PROFILE == 'Y' ? true : false;
     }
@@ -119,12 +119,15 @@ class LocalDataStoreClient extends CurlXmlClient {
 }
 
 class ProctorUClient extends CurlXmlClient {
-
+    static $errorCount;
+    
     public function __construct(){
         $baseUrl   = get_config('block_proctoru', 'proctoru_api');
         $method    = 'get';
         $options   = array('cache' => true);
         parent::__construct($baseUrl, $method, $options);
+        
+        self::$errorCount = 0;
     }
     
     public function getCurl($remoteStudentIdnumber,$serviceName){
@@ -148,7 +151,7 @@ class ProctorUClient extends CurlXmlClient {
      * @return type
      */
     public function strRequestUserProfile($remoteStudentIdnumber) {
-        mtrace(sprintf("fetching PU profile for user id = %s\n", $idnumber));
+        mtrace(sprintf("fetching PU profile for user id = %s\n", $remoteStudentIdnumber));
         return json_decode($this->getCurl($remoteStudentIdnumber, 'getStudentProfile'));
     }
     
@@ -160,13 +163,12 @@ class ProctorUClient extends CurlXmlClient {
     public function constUserStatus($remoteStudentIdnumber){
         $response    = $this->strRequestUserProfile($remoteStudentIdnumber);
         $strNotFound = isset($response->message) && strpos($response->message, 'Student Not Found');
-        $i=0;
-        if(!isset($response->data) && $strNotFound){
-            $i++;
-            if($i > 10){
-                die("too many");
+        if($strNotFound){
+            self::$errorCount++;
+            if(self::$erroCount > 2){
+                throw new Exception(sprintf("Exceeded 404 quota for class instance; count = %d", self::$errorCount));
             }
-            return ProctorU::ERROR;
+            return ProctorU::PU_NOT_FOUND;
         }else{
             return $response->data->hasimage == true ? ProctorU::VERIFIED : ProctorU::REGISTERED;
         }

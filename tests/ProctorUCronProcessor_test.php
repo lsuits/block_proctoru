@@ -7,22 +7,43 @@ require_once $CFG->dirroot . '/blocks/proctoru/tests/abstract_testcase.php';
 
 class ProctorUCronProcessor_testcase extends abstract_testcase{
 
-    public function test_blnUpdateNewUsers(){
+    public function test_blnSetUnregisteredForUsersWithoutStatus(){
         
-        // 3 new users, one unreg, one reg, one verif
-        //this is in addition to the 2 users created by Unit, admin + guest
-        $this->insertOneUserOfEachFlavor();
-
-        $this->assertEquals(5,count($this->cron->objGetAllUsers()));
-        $this->assertEquals(1,count($this->cron->objGetUnregisteredUsers()));
-        $this->assertEquals(1,count($this->cron->objGetRegisteredUsers()));
-        $this->assertEquals(1,count($this->cron->objGetVerifiedUsers()));
+        $this->buildDataset(false,true);
         
-        $this->assertEquals(3,count($this->cron->objGetAllUsersWithProctorStatus()));
-        $this->assertEquals(2,count($this->cron->objGetAllUsersWithoutProctorStatus()));
+        // +4 for the enrolTestUsers
+        $this->assertEquals(70+4,count(ProctorU::objGetAllUsersWithProctorStatus()));
         
-        $unit = $this->cron->blnUpdateNewUsers();
-        $this->assertEquals(2, count($unit));
+        // +1 for admin
+        $this->assertEquals(31,count(ProctorU::objGetAllUsersWithoutProctorStatus()));
+        
+        $unit = $this->cron->blnSetUnregisteredForUsersWithoutStatus();
+        $this->assertEquals(31, $unit);
+    }
+    
+    public function test_constProcessUser(){
+        $this->enrolTestUsers();
+//        $this->addNUsersToDatabse(20, array('suspended'=>1));
+//        $this->addNUsersToDatabse(20, array('deleted'=>1));
+        
+        // not in prod service
+        $this->setClientMode($this->localDataStore, 'test');
+        $this->setClientMode($this->puClient, 'test');
+        
+        $userWithoutOnlineSAMProfile = $this->users['userUnregistered'];
+        $this->assertEquals(ProctorU::SAM_HAS_PROFILE_ERROR, $this->cron->constProcessUser($userWithoutOnlineSAMProfile));
+        
+        $regUserWithSamAndPuRegInTest = $this->users['userRegistered'];
+        $this->assertEquals(ProctorU::REGISTERED, $this->cron->constProcessUser($regUserWithSamAndPuRegInTest));
+        
+        //now prod
+        $this->setClientMode($this->puClient, 'prod');
+        $this->setClientMode($this->localDataStore, 'prod');
+        
+        $verifiedUser = $this->users['userVerified'];
+        $this->assertEquals(ProctorU::VERIFIED, $this->cron->constProcessUser($verifiedUser));
+        
+//        $this->assertEquals(ProctorU::REGISTERED, $this->cron->constProcessUser($userWithoutOnlineSAMProfile));
     }
 }
 ?>

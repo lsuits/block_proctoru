@@ -10,10 +10,10 @@ class ProctorU {
     public $username, $password, $localWebservicesCredentialsUrl, $localWebserviceUrl;
     
     const ERROR         = -1;
-    const UNREGISTERED  = 0;
-    const REGISTERED    = 1;
-    const VERIFIED      = 2;
-    const EXEMPT        = 3;
+    const UNREGISTERED  = 1;
+    const REGISTERED    = 2;
+    const VERIFIED      = 3;
+    const EXEMPT        = 4;
     
     public function __construct() {
         $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');
@@ -193,12 +193,15 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
                 $fieldKey = $k;
             }
         }
+        if(is_null($fieldKey)){
+            throw new Exception("attempt to filter by non-existent profile field; check your field shortname exists.");
+        }
 
         $data['profile'] = $fieldKey;
         switch($status){
             case ProctorU::UNREGISTERED:
-                $data['operator']   = 6;
-                $data['value']      = '';
+                $data['operator']   = 2;
+                $data['value']      = ProctorU::UNREGISTERED;
                 break;
             case ProctorU::REGISTERED:
                 $data['operator']   = 2;
@@ -246,7 +249,7 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
             );
             list($suspXSelect, $suspXParams) = $suspFilter->get_sql_filter($suspData);
 
-            $extraselect .= " AND ".$suspXSelect . "AND deleted = 0";
+            $extraselect .= " AND ".$suspXSelect;
             $extraparams += $suspXParams;
         }
         
@@ -281,7 +284,7 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
                 self::objGetUsersWithStatusVerified()    +
                 self::objGetUsersWithStatusExempt();
     }
-    
+
     /**
      * Gets
      * @return int[]
@@ -289,17 +292,15 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
     public static function objGetAllUsersWithoutProctorStatus(){
 
         $all = self::objGetAllUsers();
-        mtrace(sprintf("found %d users", count($all)));
 
         $haveStatus = self::objGetAllUsersWithProctorStatus();
-        mtrace(sprintf("found %d users with some PU status", count($haveStatus)));
         
         $ids = array_diff(
                 array_keys($all),
                 array_keys($haveStatus)
                 );
         $haveNoStatus = array_intersect_key($all, array_flip($ids));
-        mtrace(sprintf("found %d users without status", count($haveNoStatus)));
+
         return $haveNoStatus;
     }
     
@@ -347,7 +348,5 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         }
         return $exempt;
     }
-    
-            
 }
 ?>

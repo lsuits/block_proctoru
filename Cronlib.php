@@ -9,16 +9,54 @@ class ProctorUCronProcessor {
         $this->localDataStore = new LocalDataStoreClient();
         $this->puClient       = new ProctorUClient();
     }
+    
+    /**
+     * CRON PHASES:
+     * A.
+     * 1. get all users without a status set as STATUS_UNKNOWN users
+     * 2. partition STATUS_UNKNOWN set into EXEMPT and NON_EXEMPT
+     * 3. update status fields for each group as appropriate
+     * 
+     * B. 
+     * 1. Fetch all rows where the status is STATUS_UNACCEPTABLE
+     * 2. attempt to process each of these users with STATUS_UNACCEPTABLE
+     * 
+     * C.
+     * 1. For all unregeistered users, lookup pseudoID in DAS; IF NOT EXISTS, set DAS ERROR CODE
+     * 2. for those that have PseudoIds, look them up in PU and set appropriate code
+     *  a. do not allow more than a few 404 errors to happen, otherwise, account lockout
+     * 
+     * D.
+     * 1. report errors, esp 404
+     */
+
+    public function objPartitionUsersWithoutStatus() {
+        $all    = ProctorU::objGetAllUsersWithoutProctorStatus();
+        $exempt = ProctorU::objGetExemptUsers();
+        $unreg  = array_diff_key($all, $exempt);
+        assert(count($exempt) + count($unreg) == count($all));
+        return array($unreg, $exempt);
+    }
 
     /**
      * Early cron phase:
      * For any user without a status already,set unregistered.
      */
-    public function blnSetUnregisteredForUsersWithoutStatus(){
+    public function intSetUnregisteredForUsersWithoutStatus(){
         $i=0;
         foreach(ProctorU::objGetAllUsersWithoutProctorStatus() as $unreg){
             mtrace(sprintf("Setting status unregistered for user %d", $unreg->id));
             ProctorU::intSaveProfileFieldStatus($unreg->id, ProctorU::UNREGISTERED);
+            $i++;
+        }
+        return $i;
+    }
+    
+    public function intSetStatusForExemptUsers(){
+        $i=0;
+        foreach(ProctorU::objGetExemptUsers() as $ex){
+            mtrace(sprintf("Setting status EXEMPT for user %d", $ex->id));
+            ProctorU::intSaveProfileFieldStatus($ex->id, ProctorU::EXEMPT);
             $i++;
         }
         return $i;

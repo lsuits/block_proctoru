@@ -7,6 +7,27 @@ require_once $CFG->dirroot . '/blocks/proctoru/tests/abstract_testcase.php';
 
 class ProctorUCronProcessor_testcase extends abstract_testcase{
 
+    public function test_objPartitionUsersWithoutStatus(){
+        $numTeachers = 10;
+        $numStudents = 20;
+        
+        $students = $this->addNUsersToDatabase($numStudents);
+        $teachers = $this->addNUsersToDatabase($numTeachers);
+        $course   = $this->getDataGenerator()->create_course();
+        
+        foreach($students as $s) {
+            $this->enrolUser($s, $course, $this->teacherRoleId);
+        }
+        
+        foreach($teachers as $t) {
+            $this->enrolUser($s, $course, $this->studentRoleId);
+        }
+        
+        list($unreg, $exempt) = $this->cron->objPartitionUsersWithoutStatus();
+        $this->assertEquals($numStudents +1 , count($unreg)); //+1 for admin
+        $this->assertEquals($numTeachers, count($exempt));
+    }
+    
     public function test_blnSetUnregisteredForUsersWithoutStatus(){
         
         $this->buildDataset(false,true);
@@ -17,7 +38,7 @@ class ProctorUCronProcessor_testcase extends abstract_testcase{
         // +1 for admin
         $this->assertEquals(31,count(ProctorU::objGetAllUsersWithoutProctorStatus()));
         
-        $unit = $this->cron->blnSetUnregisteredForUsersWithoutStatus();
+        $unit = $this->cron->intSetUnregisteredForUsersWithoutStatus();
         $this->assertEquals(31, $unit);
     }
     

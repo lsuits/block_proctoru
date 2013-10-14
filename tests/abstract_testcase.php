@@ -59,11 +59,7 @@ abstract class abstract_testcase extends advanced_testcase{
         $tmpUsers = $this->users;
         $course = $this->courses[0];
         $teacher =& $tmpUsers['teacher'];
-        $this->getDataGenerator()->enrol_user(
-                $teacher->id, 
-                $course->id,
-                $this->teacherRoleId
-                );
+        $this->enrolUser($teacher, $course,$this->teacherRoleId);
         unset($teacher);
         
         foreach($tmpUsers as $u){
@@ -73,6 +69,14 @@ abstract class abstract_testcase extends advanced_testcase{
                     $this->studentRoleId)
                     );
         }
+    }
+    
+    protected function enrolUser($user, $course, $role) {
+        $this->getDataGenerator()->enrol_user(
+                $user->id, 
+                $course->id,
+                $role
+                );
     }
     
     protected function insertOneUserOfEachFlavor(){

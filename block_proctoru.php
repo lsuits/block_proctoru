@@ -35,7 +35,7 @@ class block_proctoru extends block_base {
         $public   = explode(',',get_config('block_proctoru','excluded_courses'));
         $excluded = in_array($COURSE->id,$public);
 
-        $this->content = new stdClass();
+        $this->content    = new stdClass();
         $acceptableStatus = ProctorU::blnUserHasAcceptableStatus($USER->id);
         $hasExemptRole    = ProctorU::blnUserHasExemptRole($USER->id);
 
@@ -54,10 +54,16 @@ class block_proctoru extends block_base {
         if (get_config('block_proctoru','bool_cron' == 1)) {
             mtrace(sprintf("Running ProctorU cron tasks"));
             $cron = new ProctorUCronProcessor();
-            $cron->blnSetUnregisteredForUsersWithoutStatus();
-//            die();
+            $unreg  = $cron->intSetUnregisteredForUsersWithoutStatus();
+            $exempt = $cron->intSetStatusForExemptUsers();
+            
+            
+            
+            mtrace(sprintf("Done setting EXEMPT for %d users", $exempt));
+            mtrace(sprintf("Done setting UNREGISTERED for %d students", $unreg));
+            
             $unregistered = ProctorU::objGetUsersWithStatusUnregistered();
-
+            die();
             $cron->blnProcessUsers($unregistered);
         } else {
             mtrace("Skipping ProctorU");

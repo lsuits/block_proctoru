@@ -28,6 +28,38 @@ class ProctorUCronProcessor_testcase extends abstract_testcase{
         $this->assertEquals($numTeachers, count($exempt));
     }
     
+    public function test_objGetUnverifiedUsers(){
+        $v = 11;
+        $u = 23;
+        $n = 8;
+        $x = 32;
+        $r = 43;
+        $p = 13;
+        
+        $verified       = $this->addNUsersToDatabase($v);
+        $this->setProfileFieldBulk($verified, ProctorU::VERIFIED);
+        
+        $unregistered   = $this->addNUsersToDatabase($u);
+        $this->setProfileFieldBulk($unregistered, ProctorU::UNREGISTERED);
+        
+        $noIdnumber     = $this->addNUsersToDatabase($n);
+        $this->setProfileFieldBulk($noIdnumber, ProctorU::NO_IDNUMBER);
+        
+        $exempt         = $this->addNUsersToDatabase($x);
+        $this->setProfileFieldBulk($exempt, ProctorU::EXEMPT);
+        
+        $registeed      = $this->addNUsersToDatabase($r);
+        $this->setProfileFieldBulk($registeed, ProctorU::REGISTERED);
+        
+        $pu404          = $this->addNUsersToDatabase($p);
+        $this->setProfileFieldBulk($pu404, ProctorU::PU_NOT_FOUND);
+        
+        // +1 for admin user
+        $this->assertEquals(1+$u+$n+$r+$x+$v+$p, count(ProctorU::objGetAllUsers()));
+        
+        $this->assertEquals(1+$u+$n+$r,count($this->cron->objGetUnverifiedUsers()), sprintf("Added %d total users + admin", $u+$n+$r+$x+$v));
+    }
+    
     public function test_intSetStatusForUsers(){
 
         $numTeachers = 11;

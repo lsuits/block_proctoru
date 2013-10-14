@@ -42,26 +42,15 @@ class ProctorUCronProcessor {
      * Early cron phase:
      * For any user without a status already,set unregistered.
      */
-    public function intSetUnregisteredForUsersWithoutStatus(){
+    public function intSetStatusForUsersWithoutStatus($users, $status){
         $i=0;
-        foreach(ProctorU::objGetAllUsersWithoutProctorStatus() as $unreg){
-            mtrace(sprintf("Setting status unregistered for user %d", $unreg->id));
-            ProctorU::intSaveProfileFieldStatus($unreg->id, ProctorU::UNREGISTERED);
+        foreach($users as $u){
+            mtrace(sprintf("Setting status %s for user %d", $u->id, $status));
+            ProctorU::intSaveProfileFieldStatus($u->id, $status);
             $i++;
         }
         return $i;
     }
-    
-    public function intSetStatusForExemptUsers(){
-        $i=0;
-        foreach(ProctorU::objGetExemptUsers() as $ex){
-            mtrace(sprintf("Setting status EXEMPT for user %d", $ex->id));
-            ProctorU::intSaveProfileFieldStatus($ex->id, ProctorU::EXEMPT);
-            $i++;
-        }
-        return $i;
-    }
-
     
     public function blnProcessUsers($users){        
         foreach($users as $u){

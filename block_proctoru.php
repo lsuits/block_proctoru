@@ -54,14 +54,17 @@ class block_proctoru extends block_base {
         if (get_config('block_proctoru','bool_cron' == 1)) {
             mtrace(sprintf("Running ProctorU cron tasks"));
             $cron = new ProctorUCronProcessor();
-            $unreg  = $cron->intSetUnregisteredForUsersWithoutStatus();
-            $exempt = $cron->intSetStatusForExemptUsers();
             
+            //get users without status (new users)
+            list($unreg,$exempt) = $cron->objPartitionUsersWithoutStatus();
             
+            //set appropriate status for new users
+            $intUnreg = $cron->intSetStatusForUsersWithoutStatus($unreg, ProctorU::UNREGISTERED);
+            mtrace(sprintf("Set status %s for %d of %d unregistered users.",ProctorU::UNREGISTERED, $intUnreg, count($unreg)));
             
-            mtrace(sprintf("Done setting EXEMPT for %d users", $exempt));
-            mtrace(sprintf("Done setting UNREGISTERED for %d students", $unreg));
-            
+            $intExempt = $cron->intSetStatusForUsersWithoutStatus($unreg, ProctorU::EXEMPT);
+            mtrace(sprintf("Set status %s for %d of %d unregistered users.",ProctorU::EXEMPT, $intExempt, count($exempt)));
+
             $unregistered = ProctorU::objGetUsersWithStatusUnregistered();
             die();
             $cron->blnProcessUsers($unregistered);

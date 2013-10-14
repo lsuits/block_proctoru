@@ -41,8 +41,21 @@ class ProctorUCronProcessor {
         $all    = ProctorU::objGetAllUsersWithoutProctorStatus();
         $exempt = ProctorU::objGetExemptUsers();
         $unreg  = array_diff_key($all, $exempt);
-        assert(count($exempt) + count($unreg) == count($all));
+
         return array($unreg, $exempt);
+    }
+    
+    /**
+     * get users that need to be looked up again
+     * @return object[] user objects
+     */
+    public function objGetUnverifiedUsers(){
+        $all        = ProctorU::objGetAllUsers();
+        $exempt     = ProctorU::objGetUsersWithStatusExempt();
+        $verified   = ProctorU::objGetUsersWithStatusVerified();
+        $pu404      = ProctorU::objGetUsersWithStatus(ProctorU::PU_NOT_FOUND);
+
+        return array_diff_key($all, $exempt, $verified, $pu404);
     }
 
     /**
@@ -57,14 +70,14 @@ class ProctorUCronProcessor {
             if(!isset($users->id)){
                 throw new Exception("user has no id");
             }
-            mtrace(sprintf("Setting status %s for user %d", $users->id, $status));
+            mtrace(sprintf("Setting status %s for user %d", $status, $users->id));
             ProctorU::intSaveProfileFieldStatus($users->id, $status);
             return 1;
         }
 
         $i=0;
         foreach($users as $u){
-            mtrace(sprintf("Setting status %s for user %d", $u->id, $status));
+            mtrace(sprintf("Setting status %s for user %d", $status, $u->id));
             ProctorU::intSaveProfileFieldStatus($u->id, $status);
             $i++;
         }
@@ -112,7 +125,7 @@ class ProctorUCronProcessor {
         $pseudoID = $this->localDataStore->intPseudoId($u->idnumber);
         if($pseudoID == false){
             mtrace(sprintf("Pseudo id lookup failed with unknown error for user with id %d", $u->id));
-            return ProctorU::NO_PSEUDOID;
+            return ProctorU::UNREGISTERED;
         }
 
         //get PU status

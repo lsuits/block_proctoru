@@ -35,4 +35,13 @@ $string['localwebservice_userexists_servicename_description'] = "Source for user
 
 $string['stu_profile'] = "Student Profile Name";
 $string['stu_profile_description'] = "Student Profile name is a required param to the Webservice query.";
+
+//status codes
+$string['unregistered']      = 'Unregistered';
+$string['registered']        = 'Regisitered';
+$string['verified']          = 'Verified';
+$string['exempt']            = 'Exempt';
+$string['sam_profile_error'] = 'SAM ERROR';
+$string['no_idnumber']       = 'NO IDNUMBER';
+$string['pu_404']            = '404 PrU';
 ?>

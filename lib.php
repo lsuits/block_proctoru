@@ -14,15 +14,31 @@ class ProctorU {
     const VERIFIED      = 3;
     const EXEMPT        = 4;
     const SAM_HAS_PROFILE_ERROR = -1;
-    const NO_PSEUDOID   = -2;
-    const NO_IDNUMBER   = -3;
+    const NO_IDNUMBER   = -2;
     const PU_NOT_FOUND  = -404;
-    
+        
     public function __construct() {
         $this->localWebservicesCredentialsUrl = get_config('block_proctoru', 'credentials_location');
         $this->localWebservicesUrl            = get_config('block_proctoru', 'localwebservice_url');
     }
 
+    public static function strMapStatusToLangString($status){
+        $_s = function($str){
+            return get_string($str, 'block_proctoru');
+        };
+        
+        $map = array(
+            ProctorU::UNREGISTERED  => 'unregistered',
+            ProctorU::REGISTERED    => 'registered',
+            ProctorU::VERIFIED  => 'verified',
+            ProctorU::EXEMPT    => 'exempt',
+            ProctorU::SAM_HAS_PROFILE_ERROR => 'sam_profile_error',
+            ProctorU::NO_IDNUMBER   => 'no_idnumber',
+            ProctorU::PU_NOT_FOUND  => 'pu_404',
+                );
+        return $_s($map[$status]);
+    }
+    
     /**
      * insert new record into {user_info_field}
      * @global type $DB
@@ -178,7 +194,6 @@ class ProctorU {
 public static function partial_get_users_listing($status= null,$sort='lastaccess', $dir='ASC', $page=0, $recordsperpage=0,
                            $search='', $firstinitial='', $lastinitial='') {
 
-    global $DB;
     // $status = PROCTORU::VERIFIED; 
     // echo $status;
     // the extraselect needs to vary to allow the user to specify 'is not empty', etc
@@ -197,28 +212,14 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
             }
         }
         if(is_null($fieldKey)){
-            throw new Exception("attempt to filter by non-existent profile field; check your field shortname exists.");
+            throw new Exception("attempt to filter by non-existent profile field; 
+                check your field shortname exists.");
         }
 
-        $data['profile'] = $fieldKey;
-        switch($status){
-            case ProctorU::UNREGISTERED:
-                $data['operator']   = 2;
-                $data['value']      = ProctorU::UNREGISTERED;
-                break;
-            case ProctorU::REGISTERED:
-                $data['operator']   = 2;
-                $data['value']      = ProctorU::REGISTERED;
-                break;
-            case ProctorU::VERIFIED:
-                $data['operator']   = 2;
-                $data['value']      = ProctorU::VERIFIED;
-                break;
-            case ProctorU::EXEMPT:
-                $data['operator']   = 2;
-                $data['value']      = ProctorU::EXEMPT;
-                break;
-        }
+        $data['profile']    = $fieldKey;
+        $data['operator']   = 2;
+        $data['value']      = $status;
+
         list($extraselect, $extraparams) = $proFilter->get_sql_filter($data);
     }
 
@@ -305,6 +306,16 @@ public static function partial_get_users_listing($status= null,$sort='lastaccess
         $haveNoStatus = array_intersect_key($all, array_flip($ids));
 
         return $haveNoStatus;
+    }
+    
+    
+    /**
+     * @TODO replace the 4 methods below with calls to this
+     * @param int $status class constants
+     * @return object[]
+     */
+    public static function objGetUsersWithStatus($status){
+        return ProctorU::partial_get_users_listing($status);
     }
     
     /**

@@ -28,7 +28,7 @@ class ProctorUCronProcessor_testcase extends abstract_testcase{
         $this->assertEquals($numTeachers, count($exempt));
     }
     
-    public function test_intSetStatusForUsersWithoutStatus(){
+    public function test_intSetStatusForUsers(){
 
         $numTeachers = 11;
         $numStudents = 24;
@@ -36,8 +36,8 @@ class ProctorUCronProcessor_testcase extends abstract_testcase{
         $students = $this->addNUsersToDatabase($numStudents);
         $teachers = $this->addNUsersToDatabase($numTeachers);
 
-        $intStudents = $this->cron->intSetStatusForUsersWithoutStatus($students,  ProctorU::UNREGISTERED);
-        $intTeachers = $this->cron->intSetStatusForUsersWithoutStatus($teachers,  ProctorU::EXEMPT);
+        $intStudents = $this->cron->intSetStatusForUser($students,  ProctorU::UNREGISTERED);
+        $intTeachers = $this->cron->intSetStatusForUser($teachers,  ProctorU::EXEMPT);
 
         $this->assertEquals($intStudents, count($students));
         $this->assertEquals($intTeachers, count($teachers));
@@ -55,29 +55,45 @@ class ProctorUCronProcessor_testcase extends abstract_testcase{
         
     }
     
+    public function test_intGetPseudoID(){
+        // not in prod service
+        $this->setClientMode($this->localDataStore, 'test');
+
+        //set up test users
+        $this->enrolTestUsers();
+
+        $noPseudo   = $this->conf->data['testUser1'];
+        $this->assertFalse($this->cron->intGetPseudoID($noPseudo['idnumber']));
+
+        $hasPseudo  = $this->conf->data['testUser2'];
+        $this->assertInternalType('integer',$this->cron->intGetPseudoID($hasPseudo['idnumber']));
+    }
+
     public function test_constProcessUser(){
         $this->enrolTestUsers();
-//        $this->addNUsersToDatabse(20, array('suspended'=>1));
-//        $this->addNUsersToDatabse(20, array('deleted'=>1));
-        
+
         // not in prod service
         $this->setClientMode($this->localDataStore, 'test');
         $this->setClientMode($this->puClient, 'test');
-        
-        $userWithoutOnlineSAMProfile = $this->users['userUnregistered'];
-        $this->assertEquals(ProctorU::SAM_HAS_PROFILE_ERROR, $this->cron->constProcessUser($userWithoutOnlineSAMProfile));
-        
+
+        $anonUser = $this->getDataGenerator()->create_user();
+        if(isset($anonUser->idnumber)){
+            unset($anonUser->idnumber);
+        }
+        $this->assertEquals(ProctorU::NO_IDNUMBER, $this->cron->constProcessUser($anonUser));
+
+        $anonUser->idnumber = rand(999,9999);
+        $this->assertEquals(ProctorU::SAM_HAS_PROFILE_ERROR, $this->cron->constProcessUser($anonUser));
+
         $regUserWithSamAndPuRegInTest = $this->users['userRegistered'];
         $this->assertEquals(ProctorU::REGISTERED, $this->cron->constProcessUser($regUserWithSamAndPuRegInTest));
-        
+
         //now prod
         $this->setClientMode($this->puClient, 'prod');
         $this->setClientMode($this->localDataStore, 'prod');
-        
+
         $verifiedUser = $this->users['userVerified'];
         $this->assertEquals(ProctorU::VERIFIED, $this->cron->constProcessUser($verifiedUser));
-        
-//        $this->assertEquals(ProctorU::REGISTERED, $this->cron->constProcessUser($userWithoutOnlineSAMProfile));
     }
 }
 ?>

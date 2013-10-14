@@ -122,6 +122,12 @@ abstract class abstract_testcase extends advanced_testcase{
                 "fieldid = {$fieldid} AND userid = {$userid} AND data = {$value}")));
     }
     
+    public function setProfileFieldBulk($users, $value){
+        foreach($users as $u){
+            $this->setProfileField($u->id, $value);
+        }
+    }
+    
     protected function resetUserTables(){
         global $DB;
         $DB->delete_records('user');

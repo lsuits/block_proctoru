@@ -201,19 +201,31 @@ abstract class abstract_testcase extends advanced_testcase{
             if($mode == 'prod'){
                 set_config('localwebservice_url',  $this->conf->config[5][1], 'block_proctoru');
                 set_config('credentials_location', $this->conf->config[4][1], 'block_proctoru');
+
+                $this->cron->localDataStore = new LocalDataStoreClient();
+                $this->assertEquals($this->conf->config[5][1],$this->cron->localDataStore->baseUrl);
             }
             else{
                 set_config('localwebservice_url',  $this->conf->config[6][1], 'block_proctoru');
                 set_config('credentials_location', $this->conf->config[3][1], 'block_proctoru');
+
+                $this->cron->localDataStore = new LocalDataStoreClient();
+                $this->assertEquals($this->conf->config[6][1],$this->cron->localDataStore->baseUrl);
             }
-            $this->cron->localDataStore = new LocalDataStoreClient();
+
         }else{
             if($mode == 'prod'){
                 set_config('proctoru_api', $this->conf->config[12][1], 'block_proctoru');
+
+                $this->cron->puClient = new ProctorUClient();
+                $this->assertEquals($this->conf->config[12][1],$this->cron->puClient->baseUrl);
             }else{
                 set_config('proctoru_api', $this->conf->config[11][1], 'block_proctoru');
+
+                $this->cron->puClient = new ProctorUClient();
+                $this->assertEquals($this->conf->config[11][1],$this->cron->puClient->baseUrl);
             }
-            $this->cron->puClient = new ProctorUClient();
+
         }
     }
 }

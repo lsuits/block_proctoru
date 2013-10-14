@@ -30,6 +30,13 @@ class ProctorUCronProcessor {
      * 1. report errors, esp 404
      */
 
+    /**
+     * Gets all users without any value in their ProctorU 
+     * registration status field and divides them into 
+     * EXEMPT and UNREGISTERED groups.
+     * 
+     * @return array(array[object]) array of user objects for each group
+     */
     public function objPartitionUsersWithoutStatus() {
         $all    = ProctorU::objGetAllUsersWithoutProctorStatus();
         $exempt = ProctorU::objGetExemptUsers();
@@ -39,8 +46,10 @@ class ProctorUCronProcessor {
     }
 
     /**
-     * Early cron phase:
-     * For any user without a status already,set unregistered.
+     * 
+     * @param object[] $users users to set status for
+     * @param int $status the status to set
+     * @return int the number of records set
      */
     public function intSetStatusForUsersWithoutStatus($users, $status){
         $i=0;
@@ -52,6 +61,8 @@ class ProctorUCronProcessor {
         return $i;
     }
     
+
+
     public function blnProcessUsers($users){        
         foreach($users as $u){
             $status = $this->constProcessUser($u);

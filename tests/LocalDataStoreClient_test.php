@@ -17,10 +17,10 @@ class LocalDataStoreClient_testcase extends advanced_testcase {
     
     public function test_blnUserExists(){
         $idnumber = $this->conf->data['testUser1']['idnumber'];
-        $this->assertEquals('N',$this->class->blnUserExists($idnumber));
+        $this->assertFalse($this->class->blnUserExists($idnumber));
         
         $idnumber = $this->conf->data['testUser2']['idnumber'];
-        $this->assertEquals('Y',$this->class->blnUserExists($idnumber));
+        $this->assertTrue($this->class->blnUserExists($idnumber));
     }
     
     public function test_intPseudoId(){

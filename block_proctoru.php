@@ -59,14 +59,15 @@ class block_proctoru extends block_base {
             list($unreg,$exempt) = $cron->objPartitionUsersWithoutStatus();
             
             //set appropriate status for new users
-            $intUnreg = $cron->intSetStatusForUsersWithoutStatus($unreg, ProctorU::UNREGISTERED);
+            $intUnreg = $cron->intSetStatusForUser($unreg, ProctorU::UNREGISTERED);
             mtrace(sprintf("Set status %s for %d of %d unregistered users.",ProctorU::UNREGISTERED, $intUnreg, count($unreg)));
             
-            $intExempt = $cron->intSetStatusForUsersWithoutStatus($unreg, ProctorU::EXEMPT);
+            $intExempt = $cron->intSetStatusForUser($exempt, ProctorU::EXEMPT);
             mtrace(sprintf("Set status %s for %d of %d unregistered users.",ProctorU::EXEMPT, $intExempt, count($exempt)));
 
             $unregistered = ProctorU::objGetUsersWithStatusUnregistered();
-            die();
+            mtrace(sprintf("Begin processing user status for %d users", count($unregistered)));
+
             $cron->blnProcessUsers($unregistered);
         } else {
             mtrace("Skipping ProctorU");

@@ -9,7 +9,7 @@ class ProctorUCronProcessor {
         $this->localDataStore = new LocalDataStoreClient();
         $this->puClient       = new ProctorUClient();
     }
-    
+
     /**
      * CRON PHASES:
      * A.
@@ -51,7 +51,17 @@ class ProctorUCronProcessor {
      * @param int $status the status to set
      * @return int the number of records set
      */
-    public function intSetStatusForUsersWithoutStatus($users, $status){
+    public function intSetStatusForUser($users, $status){
+
+        if(!is_array($users)){
+            if(!isset($users->id)){
+                throw new Exception("user has no id");
+            }
+            mtrace(sprintf("Setting status %s for user %d", $users->id, $status));
+            ProctorU::intSaveProfileFieldStatus($users->id, $status);
+            return 1;
+        }
+
         $i=0;
         foreach($users as $u){
             mtrace(sprintf("Setting status %s for user %d", $u->id, $status));
@@ -60,49 +70,60 @@ class ProctorUCronProcessor {
         }
         return $i;
     }
-    
 
+    public function intGetPseudoID($idnumber){
+        if($this->localDataStore->blnUserExists($idnumber)){
+            return $this->localDataStore->intPseudoId($idnumber);
+        }
+        return false;
+    }
 
     public function blnProcessUsers($users){        
         foreach($users as $u){
+
+            //prepare user object
+            //@TODO find a way to get this data in the initial query !!!
+            global $DB;
+            $idnumber = $DB->get_field('user','idnumber',array('id'=>$u->id));
+            $u->idnumber = is_numeric($idnumber) ? $idnumber : null;
+
+            //process user obj
             $status = $this->constProcessUser($u);
-            ProctorU::intSaveProfileFieldStatus($u->id, $status);
+            $this->intSetStatusForUser($u, $status);
         }
     }
-    
-    public function constProcessUser($u){
-        if(!isset($u->idnumber)){
-            mtrace(sprintf("No idnumber for user with id %d", $u->id));
-            throw new Exception(sprintf(
-                    "Tried fetching data for user with no idnumber.\n
-                        Details:\n
-                        userid: %d\n
-                        username: %s\n",$u->id,$u->username));
-        }
-        if(!$this->localDataStore->blnUserExists($u->idnumber)){
 
+    public function constProcessUser($u){
+
+        //handle the case where a user has no idnumber
+        if(empty($u->idnumber)){
+            mtrace(sprintf("No idnumber for user with id %d", $u->id));
+            return ProctorU::NO_IDNUMBER;
+        }
+
+        //handle the case where we are looking up a 
+        //non-online student in the online database
+        if(!$this->localDataStore->blnUserExists($u->idnumber)){
             mtrace(sprintf("User %d is NOT registered with DAS\n", $u->id));
             return ProctorU::SAM_HAS_PROFILE_ERROR;
         }
-        $pseudoID = $this->localDataStore->intPseudoId($u->idnumber);
-        mtrace(sprintf("got pseudoID for user %s of %s\n", $u->id, $pseudoID));
-        
-        if($pseudoID != false){
 
-            $puStatus = $this->puClient->constUserStatus($pseudoID);
-            if($puStatus == false){
-                return ProctorU::PU_NOT_FOUND;
-            }else{
-                $path = $this->puClient->filGetUserImage($pseudoID);
-//                $this->blnInsertPicture($path, $u->id);
-                return $puStatus;
-            }
-        }else{
+        //fetch proxy id
+        $pseudoID = $this->localDataStore->intPseudoId($u->idnumber);
+        if($pseudoID == false){
             mtrace(sprintf("Pseudo id lookup failed with unknown error for user with id %d", $u->id));
-            return ProctorU::NO_PSEUDO;
+            return ProctorU::NO_PSEUDOID;
         }
+
+        //get PU status
+        $puStatus = $this->puClient->constUserStatus($pseudoID);
+
+        //fetch image
+//        $path = $this->puClient->filGetUserImage($pseudoID);
+        //$this->blnInsertPicture($path, $u->id);
+        return $puStatus;
     }
-    
+
     public function blnInsertPicture($path, $userid){
         global $DB;
         $context = get_context_instance(CONTEXT_USER, $userid);

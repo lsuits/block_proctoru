@@ -9,13 +9,13 @@ class ProctorU {
 
     public $username, $password, $localWebservicesCredentialsUrl, $localWebserviceUrl;
     
-    const ERROR         = -1;
     const UNREGISTERED  = 1;
     const REGISTERED    = 2;
     const VERIFIED      = 3;
     const EXEMPT        = 4;
     const SAM_HAS_PROFILE_ERROR = -1;
-    const NO_PSEUDO     = -2;
+    const NO_PSEUDOID   = -2;
+    const NO_IDNUMBER   = -3;
     const PU_NOT_FOUND  = -404;
     
     public function __construct() {
